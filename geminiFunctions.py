@@ -4,6 +4,7 @@ import prompts_and_sys_instructions
 from google import genai
 from google.genai import types
 import re
+from prompts_and_sys_instructions import *
 creds = json.load(open("credentials.json"))
 
 client = genai.Client(api_key=creds["GEMINI_API_KEY"])
@@ -62,6 +63,12 @@ def send_message(prompt, history, chat, system_instructions):
     history.append({"role": "model", "parts": [response]})
     return history, chat
 
+def next_message_for_initial_chat(history, message):
+    system_instruction = system_instructions_for_initial_chat
+    chat = client.chats.create(model="gemini-2.0-flash-exp", history=history, config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
+    response = chat.send_message(message)
+    history.append({"role": "user", "parts": [{"text" : message}]})
+    return history
 # Example usage:
 # system_instructions = prompts.base_system_instruction + prompts.system_instruction_for_sorting_attractions_based_on_time
 # history, chat, system_instructions = start_chat(system_instructions)  # Start a new chat
