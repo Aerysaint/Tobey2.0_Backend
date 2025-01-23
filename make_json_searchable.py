@@ -44,9 +44,11 @@ def handle_child_ages(query_json_list):
                         query_json_list[curr_json]["ChildAge"].remove(curr_age)
                         query_json_list[curr_json]["ChildCount"] -= 1
     return query_json_list
-js = {'CityId': ['122401', '109593'], 'CountryCode': 'TH', 'FromDate': '2024-01-18T00:00:00', 'ToDate': '2024-01-25T00:00:00', 'AdultCount': 2, 'ChildCount': 2, 'ChildAge': [19, 14], 'PreferredLanguage': 0, 'PreferredCurrency': 'INR', 'IsBaseCurrencyRequired': False, 'EndUserIp': '127.0.0.1', 'TokenId': 'generate-new-token', 'KeyWord': 'family getaway, luxurious, adventure, boat trips, snorkeling, kayaking, water sports, spa'}
-js = handle_multi_country(js)
-print(js)
-print(type(js[0]))
-js = handle_multi_city(js)
-print(js)
+
+if __name__ == "__main__":
+    js = {'CityId': ['122401', '109593'], 'CountryCode': 'TH', 'FromDate': '2024-01-18T00:00:00', 'ToDate': '2024-01-25T00:00:00', 'AdultCount': 2, 'ChildCount': 2, 'ChildAge': [19, 14], 'PreferredLanguage': 0, 'PreferredCurrency': 'INR', 'IsBaseCurrencyRequired': False, 'EndUserIp': '127.0.0.1', 'TokenId': 'generate-new-token', 'KeyWord': 'family getaway, luxurious, adventure, boat trips, snorkeling, kayaking, water sports, spa'}
+    js = handle_multi_country(js)
+    print(js)
+    print(type(js[0]))
+    js = handle_multi_city(js)
+    print(js)

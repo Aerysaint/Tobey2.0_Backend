@@ -1,13 +1,13 @@
 from geminiFunctions import *
 
-from sightseeing_llm_queries import *
-from tbo_general import *
+# from sightseeing_llm_queries import *
+# from tbo_general import *
 from tbo_sightseeing_queries import *
 from prompts_and_sys_instructions import *
 from make_json_searchable import *
 ###for testing
 
-
+print("Starting")
 with open("init_chat_history.txt", "r") as f:
     history = eval(f.read())
 print(history)
@@ -36,6 +36,7 @@ def create_user_detail_json(history, chat):
     newHistory, newChat = send_message(f"Based on the given country code, and the city list, give me the final json. You're supposed to check if the country code is correctly populated, and the CityId is correctly populated.Note that Country Code is a two letter word, for example AE for Dubai. City code is a 6 digit numeric string, for example 148767 for Yelagiri, Tamil Nadu. In case there are multiple cities, add them as a list and in case there are multiple countries, add them as a list too. Country code : {country_code}, CityList : {city_list}", newHistory, newChat, system_instruction)
     return newHistory[-1]["parts"][0]
 chat = None
+print(history)
 js = create_user_detail_json(history, chat)
 if(js[0] == '`'):
     js = js[7:]
@@ -48,3 +49,5 @@ js = handle_multi_city(js)
 js = handle_child_ages(js)
 lst = get_attractions_list_for_multiple_destinations(js)
 print(lst)
+with open("attractions.txt", "w") as f:
+    f.write(str(lst))

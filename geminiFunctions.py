@@ -66,7 +66,14 @@ def send_message(prompt, history, chat, system_instructions):
 def next_message_for_initial_chat(history):
     message = history[-1]["parts"][0]["text"]
     system_instruction = system_instructions_for_initial_chat
-    chat = client.chats.create(model="gemini-2.0-flash-exp", history=history, config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
+    chat = client.chats.create(model="gemini-1.5-pro", history=history, config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
+    response = chat.send_message(message)
+    return response.text
+
+def next_message_for_ai_chat(history):
+    message = history[-1]["parts"][0]["text"]
+    system_instruction = system_instructions_for_initial_chat
+    chat = client.chats.create(model="gemini-1.5-pro", history=history, config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
     response = chat.send_message(message)
     return response.text
 # Example usage:

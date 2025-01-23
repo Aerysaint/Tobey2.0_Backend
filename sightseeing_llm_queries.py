@@ -2,8 +2,8 @@ from geminiFunctions import *
 from prompts_and_sys_instructions import *
 import json
 
-with open("delhi_attractions.json") as f:
-    attractions = json.load(f)
+with open("attractions.txt") as f:
+    attractions = f.read()
 
 with open("init_chat_history.txt") as f:
     chat_history = (f.read())
@@ -61,9 +61,30 @@ def get_intraday_planning(attractions, chat_history, day_wise_itinerary, duratio
     history, chat, _ = start_chat(system_instruction)
     history, chat = send_message(f"Based on the given chat history, attractions, day wise itinerary, duration analysis, clustered attractions, time based attractions and budget reasoned attractions, give the intraday planning. \n\n chat history : {chat_history} \n\n attractions : {attractions} \n\n day wise itinerary : {day_wise_itinerary} \n\n duration analysis : {duration_analysis} \n\n clustered attractions : {clustered_attractions} \n\n time based attractions : {time_based_attrations} \n\n", history, chat, system_instruction)
     return history[-1]["parts"][0]
+
+def add_free_attractions_on_route(chat_history, day_wise_itinerary):
+    system_instruction = system_instruction_for_free_attraction_addition
+    history, chat, _ = start_chat(system_instruction)
+    history, chat = send_message(f"Based on the given chat history and day wise itinerary, add the free attractions on the route. \n\n chat history : {chat_history} \n\n day wise itinerary : {day_wise_itinerary} ", history, chat, system_instruction)
+    return history[-1]["parts"][0]
+
+def get_route_to_be_followed(chat_history, current_itinerary):
+    system_instruction = system_instruction_for_route_planning
+    history, chat, _ = start_chat(system_instruction)
+    history, chat = send_message(f"Based on the given chat history and current itinerary, give the route to be followed. \n\n chat history : {chat_history} \n\n current itinerary : {current_itinerary} ", history, chat, system_instruction)
+    return history[-1]["parts"][0]
+
+def add_restaurants_on_route(chat_history, current_itinerary):
+    system_instruction = system_instruction_for_adding_restaurants_on_the_route
+    history, chat, _ = start_chat(system_instruction)
+    history, chat = send_message(f"Based on the given chat history and current itinerary, add the restaurants on the route. \n\n chat history : {chat_history} \n\n current itinerary : {current_itinerary} ", history, chat, system_instruction)
+    return history[-1]["parts"][0]
+
+print(attractions)
 summarised_attractions = summarise_attractions(attractions, chat_history)
 redundancy_removed_attractions = remove_redundant_attractions(summarised_attractions, chat_history)
 shortlisted_attractions = shortlist_attractions(redundancy_removed_attractions, chat_history)
+
 # day_wise_itinerary = (get_per_day_itinerary(shortlisted_attractions, chat_history))
 duration_analysis = get_duration_analysis_of_attractions(shortlisted_attractions, chat_history)
 clustered_attractions = cluster_groups_by_geographical_data(shortlisted_attractions, chat_history)
@@ -71,5 +92,7 @@ time_based_attractions = get_timings_for_attractions(shortlisted_attractions, ch
 budget_reasoned_attractions = get_budget_reasoning_for_attractions(shortlisted_attractions, chat_history)
 
 day_wise_itinerary = get_day_wise_itinerary(chat_history, clustered_attractions, time_based_attractions, budget_reasoned_attractions, attractions, shortlisted_attractions, duration_analysis)
-
+free_attractions_added = add_free_attractions_on_route(chat_history, day_wise_itinerary)
 intraday_planning = get_intraday_planning(attractions, chat_history, day_wise_itinerary, duration_analysis, clustered_attractions, time_based_attractions)
+route_to_be_followed = get_route_to_be_followed(chat_history, intraday_planning)
+restaurants_added = add_restaurants_on_route(chat_history, route_to_be_followed)
