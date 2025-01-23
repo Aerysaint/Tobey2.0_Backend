@@ -7,6 +7,13 @@ with open("attractions.txt") as f:
 
 with open("init_chat_history.txt") as f:
     chat_history = (f.read())
+
+def retry_until_success(func, *args):
+    while True:
+        try:
+            return func(*args)
+        except Exception as e:
+            print(f"Error: {e}. Retrying...")
 def shortlist_attractions(attractions_list, chat_history):
     system_instruction = system_instruction_for_shortlisting_attractions
     history, chat, _ = start_chat(system_instruction)
@@ -81,18 +88,18 @@ def add_restaurants_on_route(chat_history, current_itinerary):
     return history[-1]["parts"][0]
 
 print(attractions)
-summarised_attractions = summarise_attractions(attractions, chat_history)
-redundancy_removed_attractions = remove_redundant_attractions(summarised_attractions, chat_history)
-shortlisted_attractions = shortlist_attractions(redundancy_removed_attractions, chat_history)
+summarised_attractions = retry_until_success(summarise_attractions, attractions, chat_history)
+redundancy_removed_attractions = retry_until_success(remove_redundant_attractions, summarised_attractions, chat_history)
+shortlisted_attractions = retry_until_success(shortlist_attractions, redundancy_removed_attractions, chat_history)
 
-# day_wise_itinerary = (get_per_day_itinerary(shortlisted_attractions, chat_history))
-duration_analysis = get_duration_analysis_of_attractions(shortlisted_attractions, chat_history)
-clustered_attractions = cluster_groups_by_geographical_data(shortlisted_attractions, chat_history)
-time_based_attractions = get_timings_for_attractions(shortlisted_attractions, chat_history)
-budget_reasoned_attractions = get_budget_reasoning_for_attractions(shortlisted_attractions, chat_history)
+duration_analysis = retry_until_success(get_duration_analysis_of_attractions, shortlisted_attractions, chat_history)
+clustered_attractions = retry_until_success(cluster_groups_by_geographical_data, shortlisted_attractions, chat_history)
+time_based_attractions = retry_until_success(get_timings_for_attractions, shortlisted_attractions, chat_history)
+budget_reasoned_attractions = retry_until_success(get_budget_reasoning_for_attractions, shortlisted_attractions, chat_history)
 
-day_wise_itinerary = get_day_wise_itinerary(chat_history, clustered_attractions, time_based_attractions, budget_reasoned_attractions, attractions, shortlisted_attractions, duration_analysis)
-free_attractions_added = add_free_attractions_on_route(chat_history, day_wise_itinerary)
-intraday_planning = get_intraday_planning(attractions, chat_history, day_wise_itinerary, duration_analysis, clustered_attractions, time_based_attractions)
-route_to_be_followed = get_route_to_be_followed(chat_history, intraday_planning)
-restaurants_added = add_restaurants_on_route(chat_history, route_to_be_followed)
+day_wise_itinerary = retry_until_success(get_day_wise_itinerary, chat_history, clustered_attractions, time_based_attractions, budget_reasoned_attractions, attractions, shortlisted_attractions, duration_analysis)
+free_attractions_added = retry_until_success(add_free_attractions_on_route, chat_history, day_wise_itinerary)
+intraday_planning = retry_until_success(get_intraday_planning, attractions, chat_history, day_wise_itinerary, duration_analysis, clustered_attractions, time_based_attractions)
+route_to_be_followed = retry_until_success(get_route_to_be_followed, chat_history, intraday_planning)
+restaurants_added = retry_until_success(add_restaurants_on_route, chat_history, route_to_be_followed)
+

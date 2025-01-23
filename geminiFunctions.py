@@ -23,7 +23,7 @@ def getGeminiResponse(system_instructions, prompt, history, chat):
     generation_config = types.GenerateContentConfig(system_instruction=system_instructions, safety_settings=safety_settings)
     if chat is None:
         # print("creating new chat with \n", history)
-        chat = client.chats.create(model="gemini-2.0-flash-exp", history=history, config=generation_config)
+        chat = client.chats.create(model="gemini-1.5-pro", history=history, config=generation_config)
     response = chat.send_message(prompt)
     return response.text, chat
 
