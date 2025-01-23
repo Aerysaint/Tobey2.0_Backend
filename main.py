@@ -1,18 +1,8 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 import firebase_handler as fh
 import geminiFunctions as gemini
 
 app = FastAPI()
-
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Your frontend URL
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 
 @app.get("/")
@@ -30,8 +20,7 @@ async def updateNextAi(sessionid: str):
     history = fh.get_ai_chat(sessionid)
     if len(history) % 2 == 0:
         return -1
-    # TODO: get the actual AI response using this(for ai chat)
-    response = "temp"
+    response = gemini.next_message_for_ai_chat(history)
     fh.add_message_to_ai_chat("model", sessionid, response)
     return "ok"
 
@@ -42,7 +31,8 @@ async def updateNextInitial(sessionid: str):
     if len(history) % 2 == 0:
         return -1
     response = gemini.next_message_for_initial_chat(history)
-    if response.__contains__("Received hihihiha"):
+    if ("Received hihihiha" in response):
+        response = response.remove("Received hihihiha")
         fh.add_summary(sessionid, response)
         return "information gathered"
     fh.add_message_to_first_chat("model", sessionid, response)
@@ -88,17 +78,14 @@ async def getAllActivities(sessionid: str):
 
 @app.get("/createUser")
 async def createUser(username: str, email: str, userid: str):
-    try:
-        user = fh.get_or_create_user(username, email, userid)
-        return {"status": "ok", "user": user}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+    fh.create_user(username, email, userid)
+    return "ok"
 
 
 @app.get("/createSession")
 async def createSession(userid: str):
     try:
-        session_id = fh.create_session(userid)
-        return session_id
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+        fh.create_session(userid)
+    except:
+        return -1
+    return "ok"

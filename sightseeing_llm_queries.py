@@ -2,7 +2,7 @@ from geminiFunctions import *
 from prompts_and_sys_instructions import *
 import json
 
-with open("attractions.txt") as f:
+with open("attractions.txt", encoding="utf-8") as f:
     attractions = f.read()
 
 with open("init_chat_history.txt") as f:
