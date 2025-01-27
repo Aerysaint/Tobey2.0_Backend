@@ -23,7 +23,7 @@ def getGeminiResponse(system_instructions, prompt, history, chat):
     generation_config = types.GenerateContentConfig(system_instruction=system_instructions, safety_settings=safety_settings)
     if chat is None:
         # print("creating new chat with \n", history)
-        chat = client.chats.create(model="gemini-1.5-pro", history=history, config=generation_config)
+        chat = client.chats.create(model="gemini-2.0-flash-exp", history=history, config=generation_config)
     response = chat.send_message(prompt)
     return response.text, chat
 
@@ -43,10 +43,11 @@ def format_history(history):
             formatted_history.append({"parts": [{"text": turn["parts"][0]}]})
     return formatted_history
 def send_message(prompt, history, chat, system_instructions):
+
     """Sends a message to the chat and updates the history."""
     # print(formatted_history)
     # time.sleep(5)
-    history.append({"role": "user", "parts": [{"text" : prompt}]})
+    # history.append({"role": "user", "parts": [{"text" : prompt}]})
     try:
         response, chat = getGeminiResponse(system_instructions, prompt,history, chat)
         print("Gemini Response:", response.strip())
@@ -54,7 +55,7 @@ def send_message(prompt, history, chat, system_instructions):
         print(f"Error calling Gemini API: {e}")
         return history, chat  # Return original history and chat in case of error
 
-    # history.append({"role": "user", "parts": prompt})
+    history.append({"role": "user", "parts": [{"text": prompt}]})
     history.append({"role": "model", "parts": [{"text" : response}]})
     return history, chat
 
