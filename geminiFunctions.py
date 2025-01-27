@@ -44,23 +44,18 @@ def format_history(history):
     return formatted_history
 def send_message(prompt, history, chat, system_instructions):
     """Sends a message to the chat and updates the history."""
-    formatted_history = []
-    for turn in history:
-        if turn["role"] == "user":
-            formatted_history.append({"parts": [{"text":turn["parts"][0]}]})
-        elif turn["role"] == "model":
-            formatted_history.append({"parts": [{"text": turn["parts"][0]}]})
     # print(formatted_history)
     # time.sleep(5)
+    history.append({"role": "user", "parts": [{"text" : prompt}]})
     try:
-        response, chat = getGeminiResponse(system_instructions, prompt, formatted_history, chat)
-        print("Gemini Response:", response)
+        response, chat = getGeminiResponse(system_instructions, prompt,history, chat)
+        print("Gemini Response:", response.strip())
     except Exception as e:
         print(f"Error calling Gemini API: {e}")
         return history, chat  # Return original history and chat in case of error
 
-    history.append({"role": "user", "parts": prompt})
-    history.append({"role": "model", "parts": [response]})
+    # history.append({"role": "user", "parts": prompt})
+    history.append({"role": "model", "parts": [{"text" : response}]})
     return history, chat
 
 def next_message_for_initial_chat(history):

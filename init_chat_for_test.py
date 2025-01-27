@@ -8,7 +8,7 @@ def start_init_chat():
     while True:
         user_input = input("Enter your message: ")
         history, chat = send_message(user_input, history, chat, system_instruction)
-        if ("Received hihihiha" in history[-1]["parts"][0]):
+        if ("Received hihihiha" in history[-1]["parts"][0]["text"]):
             break
     return history, chat
 
