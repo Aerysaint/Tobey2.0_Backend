@@ -7,14 +7,16 @@ from prompts_and_sys_instructions import *
 from make_json_searchable import *
 ###for testing
 
-print("Starting")
-with open("init_chat_history.txt", "r") as f:
-    history = eval(f.read())
-print(history)
+# print("Starting")
+# with open("init_chat_history.txt", "r") as f:
+#     history = eval(f.read())
+# print(history)
 
 # print(type(history))
 # print(history)
-def get_country_code(history, chat):
+
+attractions_list = None
+def get_country_code(history, chat=None):
     country_list = get_country_list()
     system_instruction = system_instruction_for_getting_country_code
     newHistory, newChat, __ = start_chat(system_instruction)
@@ -24,7 +26,7 @@ def get_country_code(history, chat):
 # country_code = get_country_code(history, chat)
 # print(country_code)
 
-def create_user_detail_json(history, chat):
+def create_user_detail_json(history, chat=None):
     system_instruction = system_instruction_for_creating_user_detail_json
     newHistory, newChat, _ = start_chat(system_instruction)
     newHistory, newChat = send_message("Populate the json with the given history as expected. Here's the chat history : \n\n" + str(history), newHistory, newChat, system_instruction)
@@ -35,19 +37,22 @@ def create_user_detail_json(history, chat):
     print(city_list)
     newHistory, newChat = send_message(f"Based on the given country code, and the city list, give me the final json. You're supposed to check if the country code is correctly populated, and the CityId is correctly populated.Note that Country Code is a two letter word, for example AE for Dubai. City code is a 6 digit numeric string, for example 148767 for Yelagiri, Tamil Nadu. In case there are multiple cities, add them as a list and in case there are multiple countries, add them as a list too. Country code : {country_code}, CityList : {city_list}", newHistory, newChat, system_instruction)
     return newHistory[-1]["parts"][0]
-chat = None
-print(history)
-js = create_user_detail_json(history, chat)
-if(js[0] == '`'):
-    js = js[7:]
-    js = js[:-4]
 
-js  = convert_string_to_json(js)
-# print(js)
-js = handle_multi_country(js)
-js = handle_multi_city(js)
-js = handle_child_ages(js)
-lst = get_attractions_list_for_multiple_destinations(js)
-print(lst)
-with open("attractions.txt", "w") as f:
-    f.write(str(lst))
+def get_user_json(history):
+    chat = None
+    print(history)
+    js = create_user_detail_json(history, chat)
+
+
+    if(js[0] == '`'):
+        js = js[7:]
+        js = js[:-4]
+
+    js  = convert_string_to_json(js)
+    # print(js)
+    js = handle_multi_country(js)
+    js = handle_multi_city(js)
+    js = handle_child_ages(js)
+    lst = get_attractions_list_for_multiple_destinations(js)
+    attractions_list = lst
+    return attractions_list

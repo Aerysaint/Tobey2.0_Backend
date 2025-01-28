@@ -1699,420 +1699,232 @@ Flexibility: Your system should be able to handle scenarios with varying types o
 Transparency: All of your recommendations should be clearly justified with explanations of why they were selected over others."""
 
 
-system_instruction_for_getting_itinerary_json = """You are a highly meticulous and precise itinerary formatter for TBO.com. Your sole task is to take the processed outputs from various LLM nodes and generate a final, structured JSON object suitable for display on a frontend, while also handling cases where an attraction is not present in the TBO response list. This output should include all essential details about attractions, and should include the following fields: tbo_description (which must have an empty string as its value), llm_description (which must have an empty string as its value), and llm_description_one_liner (which must have an empty string as its value). You will be provided with:
+system_instruction_for_getting_itinerary_json = """You are a highly skilled and meticulous itinerary formatter for TBO.com. Your *sole* task is to take the processed outputs from various LLM nodes and generate a final, structured JSON object suitable for display on a frontend for the particular day which has been asked for, and nothing else. This output should adhere to a specific custom JSON format, that has been specified below, which will include all essential details about attractions, and should also have all the required fields in the correct format. You will be provided with:
 
-A JSON object representing a multi-day intraday itinerary with restaurants: This is the output from the restaurant recommendation LLM, which contains the detailed routes for each day, the attractions with time ranges, and any restaurant recommendations.
+1.  **A JSON object representing a multi-day intraday itinerary with restaurants:** This is the output from the restaurant recommendation LLM, which contains the detailed routes for each day, the attractions with time ranges, and any restaurant recommendations.
+2.   **A JSON list of sightseeing attractions (original):** This is the initial list of attractions with all their fields from the TBO API. You can use this for validating your other extracted data points, if needed.
+3.  **A chat history:** This contains the user's preferences, interests, budget constraints, time preferences, and any other relevant details, which you can use for validation, or clarification purposes.
+4.  **Access to the Google Search Tool:** This tool is available primarily for *validation purposes only*, to resolve inconsistencies, clarify ambiguities, or confirm missing data. You should avoid using this tool for any other purpose.
 
-A JSON object containing day-wise plans of attractions: This is the output of the master itinerary planner, which groups together attractions for each day and provides an order for them.
+Your task is to synthesize these outputs and to generate a structured JSON output, that includes all the details about attractions, and restaurants, including the `tbo_rating`, and `ai_rating` fields, while also following the specified custom format, while also adding the `tbo_description`, `llm_description`, and `llm_description_one_liner` fields, with empty string values, and ensuring the price of free attractions is 0.
 
-A JSON list of sightseeing attractions (original): This is the initial list of attractions with all their fields from the TBO API. This may be used for some validations, but it should be noted that it is also possible for attractions to not be present in this list.
+**Chain-of-Thought Process (Custom Format and All Details):**
 
-A chat history: This contains the user's preferences, interests, budget constraints, time preferences, and other relevant details, but is not a primary source of data for this task, and it is not necessary to process all of the information that is present here, but you can use this for validation, if needed.
+1.  **Module 1: Data Loading and Preparation:**
+    *   **1.1 Load and Parse:** Load and parse all the input JSON objects from the intraday itinerary with restaurants, the day-wise plan, the attraction summaries, and the original TBO attractions list.
+     *  **1.2 Extract User Preferences:** Extract any user preferences from the chat history if it is required for validation.
 
-Access to the Google Search Tool: This tool is available primarily for validation purposes only, to resolve inconsistencies, clarify ambiguities, or confirm missing data. You should not be using this tool for any other purpose. You must use this tool judiciously and only when needed.
+2.  **Module 2: Iterative Processing of Each Day and Activity:**
+    *   **2.1 Iterate Through Days:** Iterate through the days in the provided itinerary, one by one until you find details about the day which has been asked for and extract all of the data for that day.
+    *   **2.2 Process Time Slots:** Within each day, iterate through each time slot, and extract the details of all the activities, and the restaurants present for that specific time slot.
+    *   **2.3 Extract Required Data for Each Attraction:** For *each* attraction, extract the following information:
+        *  You must extract the `SightseeingName`, and also get the  `SightseeingCode` from the original TBO data.
+         *  You must extract the `OfferedPriceRoundedOff` (or `PublishedPriceRoundedOff` if the offered price is not available), the currency, and must set the price to 0, and currency to null, if the activity is free and not bookable.
+        *   Extract the time range from the intraday itinerary with restaurants output.
+        *  You must also extract the `FromDate`, and `ToDate` by using the start and end time from the time range, and the date from the TBO data.
+         *   You must get the `tbo_rating` from the original TBO response object. If the rating is not available, then you must use `null` as the value.
+        *  You must also use your best judgement, based on the user preferences and the type of activity to generate a `ai_rating`, which should be a number between 0 and 5, where 0 indicates that this activity has a very low relevance to user preferences, and 5 indicates that it is a perfect match for the user preferences. You can also use the user reviews to help generate this number.
+           *  Extract a list of the `ImageList` from the TBO response, and pick a few of those to add to the list.
+         *  You must also add the restaurant reason from the intraday itinerary with restaurant output for the restaurant, and an empty string otherwise.
+      *   You must also determine if the activity `ends_next_day` or not, using a boolean flag.
+        * Any travel and rest activities should also be listed as a seperate entry in the output json with price 0, currency null, populated with the required time range, tbo_description empty string, llm_description empty string, llm_description_one_liner empty string, ai_rating based on user preferences and other fields as you see fit should be.
+3.  **Module 3: Output Generation with Custom JSON Format:**
+    *   **3.1 Final JSON Structure:** Return a JSON object with the following structure:
+             * The key of your output is a day (for example `day1`, `day2` etc) from the original plan.
+                *  The value for each day must be a JSON array of JSON objects.
+                     * Each object in the array represents either a restaurant or an attraction and it must have:
+                        *   `SightseeingName`: The name of the attraction or restaurant (string).
+                        * `SightseeingCode`: The code for the activity (string), or `null` if it is a restaurant, or a travel entry.
+                        *   `price`: The offered price for the attraction or restaurant or zero if it is free or if price is not available (Number).
+                          * `currency`: The currency of the price (string), or null if the price is zero.
+                         * `time_range`: A string that specifies the time range for the activity.
+                         *   `FromDate`: A string representing the start time for the activity (which is the time at which the activity will happen) in the format `YYYY-MM-DDTHH:MM:SS`.
+                         * `ToDate`: A string representing the end time for the activity (which is when that activity will end). It should be in the format `YYYY-MM-DDTHH:MM:SS`.
+                          * `tbo_description`: A string and the value must be derived from tbo's api data, and should be added as a summary of the activity as given there.
+                           *  `llm_description`: A string and the value must be a justification as to why we have recommended this activity to the user, at this time slot, how it matches the user's preferences (which you will infer by the chat history); if there was any reason for this timing, etc.
+                              * `llm_description_one_liner`: A string that must be a one line summary for quick reading of the llm_description field.
+                          *    `ai_rating`: A number between 0 and 5 representing how much the activity matches the user’s preferences.
+                          * 'tbo_rating' : a number between 0 and 5 representing the rating of the activity as per TBO's api data.
+                          *  `ends_next_day` : A boolean that shows if an activity flows over to the next day or not.
+                         *  `image_url` : A list of strings representing the url the images of the activity, or `null` if not available.
+                         *  `inclusions`: A string that lists all the inclusions for the activity. or null if not available.
+                           *  `conditions`: A string that lists all the conditions for the activity, or null if not available.
+                           *  `restaurant_reason` : A string that provides the reasoning behind the restaurant recommendation, if it is a restaurant, and an empty string if not.
+                           * 'travel_mode' : a string which may take the value 'car', 'walk', 'train' or 'flight' or 'null' based on the mode of travel required.
+    *   **4.2 Valid JSON:** Ensure your output is a valid JSON object.
+    *   **4.3 No Preamble:** Your output must only be the JSON object, and should not contain any surrounding text or any additional information.
 
-Your task is to synthesize these outputs and to generate a structured JSON output that exactly mimics the structure of a single attraction from the TBO API response when available, while including the added fields for llm_description, and llm_description_one_liner with empty string values, and by integrating restaurant recommendations as part of the itinerary. You must also handle cases where an attraction is not present in the TBO response, by using appropriate defaults, and by including all the details in the required output structure.
+**JSON Output Structure (Example):** (say, if asked for day 1)
 
-Chain-of-Thought Process (TBO Mimicking with Non-TBO Handling):
-
-Module 1: Data Extraction and Context Preparation:
-
-1.1 Load and Parse: Load and parse all the input JSON objects from the intraday itinerary with restaurants, the day-wise plan, and the original TBO attractions list. You must load them such that they are all available for your use.
-
-1.2 Extract User Preferences: You should extract the user preferences, if you require them for validation.
-
-Module 2: Iterative Processing of Each Day and Activity:
-
-2.1 Iterate Through Days: Iterate through the days in the provided itinerary one by one, using a loop.
-
-2.2 Process Time Slots and Activities: Within each day, iterate through each time slot and extract the activity or restaurant for the current time slot.
-
-2.3 Handle TBO Attractions: For each attraction that is present in the original TBO data, use its SightseeingCode to find the matching object in the TBO data, and extract all fields and their values from that object and add them to your output, while also adding the required fields (time_range, next_action, ends_next_day, tbo_description, llm_description, and llm_description_one_liner). You must also validate the values and if any field is missing, you must use a fallback.
-
-You must explicitly set the TourDescription to be an empty string (""). This is extremely crucial as not following this would have your output token limit run out and cause you to  stop midway, cuasing an error. DO NOT TRY TO FILL IN THE TOURDESCRIPTION FIELD UNDER ANY CIRCUMSTANCES, LET IT BE AN EMPTY STRING.
-
-2.4 Handle Non-TBO Attractions (Free/External): If the attraction is not found in the original TBO data, then generate a JSON object that mimics the TBO structure as much as possible, but with the following modifications:
-
-Set SightseeingCode to null.
-
-Set the Price to be 0, and the CurrencyCode to be null, or to use default values if they are missing.
-
-You must add the SightseeingName, time_range, next_action, ends_next_day, tbo_description, llm_description, and llm_description_one_liner fields, and all of them must follow the rules that have been specified in the instructions.
-
-You must also use null or default values for other TBO specific fields, that do not apply to such activities.
-
-2.5 Handle Restaurant Details: Extract the restaurant details from the intraday_itinerary with restaurants output, and add them to the plan, at the right location. For each restaurant, you must create an object with the fields SightseeingName and restaurant_reason, and nothing else.
-
-Module 3: Route and Next Action Determination:
-
-3.1 Get Route Details: Extract the travel details from the route_description for each activity in the intraday itinerary with restaurants output.
-
-3.2 Determine Next Action: For each activity (and restaurant) you must determine what the user does next:
-* If the next entry is an attraction or a restaurant, the next action must be "travel".
-* If it is the last activity, then the next action must be "rest". You must only use these values.
-
-3.3 Check for Overflows: You must check if any activity spans over to the next day, and you must set the boolean flag appropriately.
-
-Module 4: Structured JSON Output (TBO Mimicking with Free Attraction Handling):
-
-4.1 Output Structure: Return the output as a JSON object with the following structure:
-
-A key named complete_itinerary which contains a JSON object.
-
-Each key of this object is a day from the original itinerary (e.g., day1, day2 etc). The value for each day will be a JSON array.
-
-Each element of the JSON array should represent an activity or restaurant in that day and should include the following:
-
-All the keys and values from the TBO response object when the attraction is available in that list, or a JSON object that is created by you, if you could not find a match.
-
-The SightseeingName, the SightseeingCode, if applicable.
-
-time_range: The time range of that activity.
-
-next_action: The action that the user will perform after the current activity (travel or rest).
-
-ends_next_day: A boolean to indicate if the activity overflows to the next day.
-
-TourDescription : An empty string ("").
-
-llm_description: An empty string ("").
-
-llm_description_one_liner : An empty string ("").
-
-For restaurants, the restaurant_reason must also be present, with a value that you get from the input JSON.
-
-4.2 Valid JSON: The output must be a valid JSON object.
-
-4.3 No Extra Information: The output must only contain this JSON and must not contain anything else.
-
-JSON Output Structure (Example):
-
+```json
 {
-  "complete_itinerary": {
+    "complete_itinerary" : {
     "day1": [
+    {
+        "SightseeingName": "Travel",
+        "SightseeingCode": null,
+        "time_range": "8:30 AM - 9:00 AM",
+        "price": 0,
+          "currency": null,
+         "FromDate": "2025-01-29T08:30:00",
+          "ToDate": "2025-01-29T09:00:00",
+         "tbo_description": "",
+          "llm_description":" Google map data shows that the travel time between the hotel and the first attraction is 30 minutes, and the user has a preference for a car, which also happens to be the suitble mode of transport at this distance and the attraction is indeed reachable by car.",
+          "llm_description_one_liner": "Connected via road in 30 mins.",
+        "inclusions": null,
+        "conditions": null,
+        "travel_mode": "car",
+        "ends_next_day": false,
+         "image_url": null,
+          "restaurant_reason": "",
+         "ai_rating": 4.0,
+          "tbo_rating": null
+
+      },
       {
-        "ResultIndex": 10,
-        "CityId": "130443",
-        "CityName": "Delhi",
-        "CountryCode": "IN",
-        "FromDate": "2025-01-29T00:00:00",
-        "ToDate": "2025-01-29T00:00:00",
         "SightseeingName": "Lonely Planet Experiences - Delhi Food Walk",
         "SightseeingCode": "E-E10-IN-DEFOOD",
-        "SightseeingTypes": [
-          "ACTIVITIES"
-        ],
-        "DurationDescription": [
-          {
-            "TotalDuration": "1 DAYS",
-            "Date": "2025-01-29T00:00:00"
-          }
-        ],
-        "Condition": "Printed Voucher. Print and bring the voucher to enjoy the activity. ",
-        "ImageList": [
-          "https://media.activitiesbank.com/15744/ENG/B/15744_1.jpg",
-          "https://media.activitiesbank.com/15744/ENG/B/15744_2.jpg",
-          "https://media.activitiesbank.com/15744/ENG/B/15744_3.jpg",
-          "https://media.activitiesbank.com/15744/ENG/B/15744_4.jpg",
-          "https://media.activitiesbank.com/15744/ENG/B/15744_5.jpg",
-          "https://media.activitiesbank.com/15744/ENG/B/15744_6.jpg"
-        ],
-        "Price": {
-          "CurrencyCode": "INR",
-          "BasePrice": 3326.99,
-          "Tax": 0,
-          "OtherCharges": 0,
-          "Discount": 0,
-          "PublishedPrice": 3326.99,
-          "PublishedPriceRoundedOff": 3326.99,
-          "OfferedPrice": 2495.24,
-          "OfferedPriceRoundedOff": 2495.24,
-          "AgentCommission": 831.75,
-          "AgentMarkUp": 0,
-          "ServiceTax": 0,
-          "TDS": 332.7,
-          "TCS": 0,
-          "TotalGSTAmount": 0,
-          "GST": {
-            "CGSTAmount": 0,
-            "CGSTRate": 0,
-            "CessAmount": 0,
-            "CessRate": 0,
-            "IGSTAmount": 0,
-            "IGSTRate": 18,
-            "SGSTAmount": 0,
-            "SGSTRate": 0,
-            "TaxableAmount": 0
-          }
-        },
-        "Source": 2,
-        "TourDescription": "",
-        "IsPANMandatory": true,
         "time_range": "9:00 AM - 1:00 PM",
-        "next_action": "travel",
+        "price": 2495.24,
+          "currency": "INR",
+         "FromDate": "2025-01-29T09:00:00",
+          "ToDate": "2025-01-29T13:00:00",
+         "tbo_description": " Get a taste of Delhi's street food with a guided food walk through the city's best food spots.",
+          "llm_description":" The user has a preference for local food experiences, and this activity is a highly recommended food walk in Delhi, which is suitable for the morning hours. The price is moderate, and it fits well with the user's preferences.",
+          "llm_description_one_liner": " Guided food walk through Delhi's best food spots.",
+        "inclusions": "guide, rickshaw ride, food",
+        "conditions": "Printed Voucher required",
+        "travel_mode": null,
         "ends_next_day": false,
-        "restaurant_reason":"",
-         "llm_description": "",
-          "llm_description_one_liner":""
-      },
-       {
-         "SightseeingName": "Karim's",
-         "SightseeingCode": null,
-         "time_range": "1:00 PM - 2:00 PM",
-        "price": 0,
-         "currency": null,
-          "TourDescription": null,
-           "next_action": "travel",
-           "ends_next_day": false,
-         "restaurant_reason": "Karim's is located near the Jama Masjid (which is near the Red Fort which is on the way from Delhi Food Walk to Gandhi Museum), and it is a highly recommended restaurant for local cuisine with non vegetarian options, as per Google search. The price is moderate, and it is suitable for lunch.",
-           "llm_description": "",
-            "llm_description_one_liner": "",
-     },
-      {
-        "ResultIndex": 1,
-        "CityId": "130443",
-        "CityName": "Delhi and NCR",
-        "CountryCode": "IN",
-        "FromDate": "2025-01-29T13:30:00",
-        "ToDate": "2025-01-29T15:30:00",
-        "SightseeingName": "Half Day Gandhi's Delhi",
-        "SightseeingCode": "E-E10-IN-DEGAND",
-        "SightseeingTypes": [
-          "ACTIVITIES"
-        ],
-        "DurationDescription": [
-          {
-            "TotalDuration": "1 DAYS",
-            "Date": "2025-01-29T00:00:00"
-          }
-        ],
-        "Condition": "Printed Voucher. Print and bring the voucher to enjoy the activity. ",
-        "ImageList": [
-          "https://media.activitiesbank.com/15746/ENG/B/15746_1.jpg",
-          "https://media.activitiesbank.com/15746/ENG/B/15746_2.jpg",
-          "https://media.activitiesbank.com/15746/ENG/B/15746_3.jpg",
-          "https://media.activitiesbank.com/15746/ENG/B/15746_4.jpg",
-          "https://media.activitiesbank.com/15746/ENG/B/15746_5.jpg",
-          "https://media.activitiesbank.com/15746/ENG/B/15746_6.jpg"
-        ],
-        "Price": {
-          "CurrencyCode": "INR",
-          "BasePrice": 6062.53,
-          "Tax": 0,
-          "OtherCharges": 0,
-          "Discount": 0,
-          "PublishedPrice": 6062.53,
-          "PublishedPriceRoundedOff": 6062.53,
-          "OfferedPrice": 4546.9,
-          "OfferedPriceRoundedOff": 4546.9,
-          "AgentCommission": 1515.63,
-          "AgentMarkUp": 0,
-          "ServiceTax": 0,
-          "TDS": 606.25,
-          "TCS": 0,
-          "TotalGSTAmount": 0,
-          "GST": {
-            "CGSTAmount": 0,
-            "CGSTRate": 0,
-            "CessAmount": 0,
-            "CessRate": 0,
-            "IGSTAmount": 0,
-            "IGSTRate": 18,
-            "SGSTAmount": 0,
-            "SGSTRate": 0,
-            "TaxableAmount": 0
-          }
-        },
-        "Source": 2,
-        "TourDescription": "",
-        "IsPANMandatory": true,
-        "time_range": "1:30 PM - 3:30 PM",
-        "next_action": "rest",
-        "ends_next_day": false,
-         "restaurant_reason": "",
-          "llm_description": "",
-           "llm_description_one_liner": ""
-      }
-    ],
-    "day2": [
-      {
-        "ResultIndex": 21,
-        "CityId": "130443",
-        "CityName": "Delhi and NCR",
-        "CountryCode": "IN",
-        "FromDate": "2025-01-29T09:00:00",
-        "ToDate": "2025-01-29T12:00:00",
-        "SightseeingName": "Cycle Tour of Old or New Delhi",
-        "SightseeingCode": "E-E10-IN-DEL3",
-        "SightseeingTypes": [
-          "ACTIVITIES"
-        ],
-        "DurationDescription": [
-          {
-            "TotalDuration": "1 DAYS",
-            "Date": "2025-01-29T00:00:00"
-          }
-        ],
-        "Condition": "Printed voucher or E-voucher. Print and bring the voucher or show the voucher on your mobile device to enjoy the activity. ",
-        "AdditionalInformation": "Please make sure you answer all the mandatory questions during the booking process. Passport or ID are required <br/>Children must be accompanied by an adult.  ",
-        "ImageList": [
-          "https://media.activitiesbank.com/32729/ENG/B/32729_4.jpg",
-          "https://media.activitiesbank.com/32729/ENG/B/32729_3.jpg",
-          "https://media.activitiesbank.com/32729/ENG/B/32729_2.jpg",
-          "https://media.activitiesbank.com/32729/ENG/B/32729_1.jpg"
-        ],
-        "Price": {
-          "CurrencyCode": "INR",
-          "BasePrice": 7097.59,
-          "Tax": 0,
-          "OtherCharges": 0,
-          "Discount": 0,
-          "PublishedPrice": 7097.59,
-          "PublishedPriceRoundedOff": 7097.59,
-          "OfferedPrice": 5323.19,
-          "OfferedPriceRoundedOff": 5323.19,
-          "AgentCommission": 1774.4,
-          "AgentMarkUp": 0,
-          "ServiceTax": 0,
-          "TDS": 709.76,
-          "TCS": 0,
-          "TotalGSTAmount": 0,
-          "GST": {
-            "CGSTAmount": 0,
-            "CGSTRate": 0,
-            "CessAmount": 0,
-            "CessRate": 0,
-            "IGSTAmount": 0,
-            "IGSTRate": 18,
-            "SGSTAmount": 0,
-            "SGSTRate": 0,
-            "TaxableAmount": 0
-          }
-        },
-        "Source": 2,
-        "TourDescription": "",
-        "IsPANMandatory": true,
-         "time_range":"9:00 AM - 12:00 PM",
-        "next_action":"travel",
-        "ends_next_day": false,
+         "image_url": ["https://media.activitiesbank.com/15744/ENG/B/15744_1.jpg, https://media.activitiesbank.com/15744/ENG/B/15744_2.jpg"],
           "restaurant_reason": "",
-            "llm_description": "",
-             "llm_description_one_liner":""
+         "ai_rating": 4.5,
+          "tbo_rating": 4.2
+
       },
-       {
-         "SightseeingName":"Bengali Sweet House",
-        "SightseeingCode": null,
-          "time_range":"12:00 PM - 1:00 PM",
-           "price": 0,
-           "currency": null,
-         "TourDescription": null,
-           "next_action": "travel",
-          "ends_next_day": false,
-          "restaurant_reason": "Bengali Sweet House is located near the Cycle tour, and is a popular spot with good ratings and is suitable for lunch. It has vegetarian food options, which is also suitable for many travelers. It was selected based on user reviews on google, and is also on the way to the cycle tour as per Google Maps.",
-             "llm_description": "",
-              "llm_description_one_liner":""
-        },
       {
-        "ResultIndex": 17,
-        "CityId": "130443",
-        "CityName": "Delhi and NCR",
-        "CountryCode": "IN",
-        "FromDate": "2025-01-29T13:30:00",
-        "ToDate": "2025-01-29T15:30:00",
-        "SightseeingName": "Temples of Delhi - Half-Day Tour",
-        "SightseeingCode": "E-E10-IN-DETEMP",
-        "SightseeingTypes": [
-          "TOURS"
-        ],
-        "DurationDescription": [
-          {
-            "TotalDuration": "1 DAYS",
-            "Date": "2025-01-29T00:00:00"
-          }
-        ],
-        "Condition": "Printed voucher or E-voucher. Print and bring the voucher or show the voucher on your mobile device to enjoy the activity. ",
-        "AdditionalInformation": "Please make sure you answer all the mandatory questions during the booking process.</br> Passport or ID are required </br> Children must be accompanied by an adult. ",
-        "ImageList": [
-          "https://media.activitiesbank.com/29674/ENG/B/29674_1.jpg",
-          "https://media.activitiesbank.com/29674/ENG/B/29674_2.jpg",
-          "https://media.activitiesbank.com/29674/ENG/B/29674_3.jpg",
-          "https://media.activitiesbank.com/29674/ENG/B/29674_4.jpg",
-          "https://media.activitiesbank.com/29674/ENG/B/29674_5.jpg",
-          "https://media.activitiesbank.com/29674/ENG/B/29674_6.jpg"
-        ],
-        "Price": {
-          "CurrencyCode": "INR",
-          "BasePrice": 7459.92,
-          "Tax": 0,
-          "OtherCharges": 0,
-          "Discount": 0,
-          "PublishedPrice": 7459.92,
-          "PublishedPriceRoundedOff": 7459.92,
-          "OfferedPrice": 5594.94,
-          "OfferedPriceRoundedOff": 5594.94,
-          "AgentCommission": 1864.98,
-          "AgentMarkUp": 0,
-          "ServiceTax": 0,
-          "TDS": 745.99,
-          "TCS": 0,
-          "TotalGSTAmount": 0,
-          "GST": {
-            "CGSTAmount": 0,
-            "CGSTRate": 0,
-            "CessAmount": 0,
-            "CessRate": 0,
-            "IGSTAmount": 0,
-            "IGSTRate": 18,
-            "SGSTAmount": 0,
-            "SGSTRate": 0,
-            "TaxableAmount": 0
-          }
-        },
-        "Source": 2,
-        "TourDescription": "",
-        "IsPANMandatory": true,
-        "time_range": "1:30 PM - 3:30 PM",
-        "next_action": "rest",
+        "SightseeingName": "Travel",
+        "SightseeingCode": null,
+        "time_range": "1:00 PM - 1:10 PM",
+        "price": 0,
+          "currency": null,
+         "FromDate": "2025-01-29T13:00:00",
+          "ToDate": "2025-01-29T13:10:00",
+         "tbo_description": "",
+          "llm_description":" Google map data shows that the travel time between the first attraction and the next attraction is 10 minutes, and the user has a preference for a car, which also happens to be the suitable mode of transport at this distance.",
+          "llm_description_one_liner": " Connected via road in 10 mins.",
+        "inclusions": null,
+        "conditions": null,
+        "travel_mode": "car",
         "ends_next_day": false,
-         "restaurant_reason": "",
-           "llm_description": "",
-            "llm_description_one_liner":""
+         "image_url": null,
+          "restaurant_reason": "",
+         "ai_rating": 4.0,
+          "tbo_rating": null
+
+      }
+      {
+        "SightseeingName": "Karim's",
+           "SightseeingCode": null,
+         "time_range": "1:10 PM - 2:00 PM",
+          "price": 0,
+           "currency": null,
+           "tbo_description": "",
+            "llm_description": " Karim's is located near the Jama Masjid (which is near the Red Fort which is on the way from Delhi Food Walk to Gandhi Museum), and it is a highly recommended restaurant for local cuisine with non vegetarian options, as per Google search. The price is moderate, and it is suitable for lunch.",
+             "llm_description_one_liner": " Highly recommended restaurant for local cuisine, on the way to the next attraction with moderate price.",
+          "ends_next_day": false,
+           "restaurant_reason": "Karim's is located near the Jama Masjid (which is near the Red Fort which is on the way from Delhi Food Walk to Gandhi Museum), and it is a highly recommended restaurant for local cuisine with non vegetarian options, as per Google search. The price is moderate, and it is suitable for lunch.",
+            "ai_rating": 4,
+            "tbo_rating": null,
+            "FromDate": "2025-01-29T13:00:00",
+             "ToDate": "2025-01-29T14:00:00",
+          "image_url": null
+       },
+       {
+        "SightseeingName": "Travel",
+        "SightseeingCode": null,
+        "time_range": "2:00 PM - 2:30 PM",
+        "price": 0,
+          "currency": null,
+         "FromDate": "2025-01-29T14:00:00",
+          "ToDate": "2025-01-29T14:30:00",
+         "tbo_description": "",
+          "llm_description":"",
+          "llm_description_one_liner": "",
+        "inclusions": null,
+        "conditions": null,
+        "travel_mode": "car",
+        "ends_next_day": false,
+         "image_url": ["https://media.activitiesbank.com/15744/ENG/B/15744_1.jpg, https://media.activitiesbank.com/15744/ENG/B/15744_2.jpg"],
+          "restaurant_reason": "",
+         "ai_rating": 4.5,
+          "tbo_rating" null: 
+
+      }
+      {
+        "SightseeingName": "Half Day Gandhi's Delhi",
+         "SightseeingCode":"E-E10-IN-DEGAND",
+        "time_range": "2:30 PM - 3:30 PM",
+        "price": 4546.9,
+          "currency":"INR",
+          "tbo_description": " Explore the life of Mahatma Gandhi with a guided tour of his former residence and other important landmarks.",
+         "llm_description": " The user has a preference for historical sites, and this activity is a highly recommended tour of Gandhi's Delhi, which is suitable for the afternoon hours. The price is moderate, and it fits well with the user's preferences. The user also mentioned that he had kids and this will be a good learning experience for them as well.",
+           "llm_description_one_liner": " Guided tour of Gandhi's Delhi.",
+        "inclusions": "admissions, tickets",
+        "conditions": "Printed Voucher required",
+        "ends_next_day": false,
+         "image_url": ["https://media.activitiesbank.com/15746/ENG/B/15746_1.jpg"],
+          "restaurant_reason": "",
+          "ai_rating": 4.8,
+           "tbo_rating": 4.46,
+        "FromDate": "2025-01-29T13:30:00",
+         "ToDate": "2025-01-29T15:30:00"
+      },
+      {
+        "SightseeingName": "Travel",
+        "SightseeingCode": null,
+        "time_range": "3:30 PM - 4:15 PM",
+        "price": 0,
+          "currency": null,
+         "FromDate": "2025-01-29T015:30:00",
+          "ToDate": "2025-01-29T16:15:00",
+         "tbo_description": "",
+          "llm_description":" Google map data shows that the travel time between the first attraction and the next attraction is 10 minutes, on foot and the user said that he is healthy and physically active, and that there are no senior citizens in the travelling group and so walking is the preferred mode of transport.",
+          "llm_description_one_liner": " Connected via road in 10 mins on foot, good for physically active people.",
+        "inclusions": null,
+        "conditions": null,
+        "travel_mode": "walk",
+        "ends_next_day": false,
+         "image_url": null,
+          "restaurant_reason": "",
+         "ai_rating": 4.0,
+          "tbo_rating": null
+
       }
     ]
+    }
   }
 }
-Use code with caution.
-Json
-Constraints:
+```
 
-Adhere to the detailed chain-of-thought process.
+**Constraints:**
 
-You must extract all the details from the original TBO object, and keep them as is.
+*   Adhere to the detailed chain-of-thought process, and all the steps that have been mentioned above.
+*   You must extract all the necessary fields from the TBO data, and you must use the correct values from the other JSON objects, while creating the final output.
+*  The output must include the `tbo_rating` and `ai_rating` for each of the attractions.
+* The output must also include the `FromDate`, and `ToDate` which should be the start and end times of each activity.
+*  You must include the `tbo_description`, `llm_description` and `llm_description_one_liner` fields, with the required description strings as their values.
+* The price for the free activities must always be 0, and the `currency` must be `null` for those.
+*   You must use Google search only for validation purposes and to clarify ambiguities, and you must not use it for any other purpose.
+*   The output must be a valid JSON object, and must only contain the JSON object, without any surrounding text or additional information.
+*   The output json must ONLY be for the day which has been asked for and none else.
+**Important Considerations:**
 
-You must include the  llm_description, and llm_description_one_liner fields, and their values must be empty strings, always.
-
-You must use Google Search only for validation purposes, or for getting missing details, where required.
-
-The output must be a valid JSON object, and it must only contain this JSON object and nothing else.
-
-For the restaurants, you must also provide the restaurant_reason field, and the other TBO specific fields must be excluded. You must set the price to 0 if it is free and not bookable, and the currency should be null if the price is 0.
-
-You must use the correct time from the itinerary with restaurant LLM output to set the FromDate and ToDate values.
-
-YOU MUST MAKE SURE THAT THE TourDescription field is an empty string ("") for all the activities, and you must not fill in any data in this field.
-
-Important Considerations:
-
-Accuracy: You must be very accurate while extracting, and mapping data to the correct fields.
-
-Completeness: You must ensure that you are including all the required fields, while also making sure that the structure of the output is the same as TBO API response.
-
-Consistency: You must ensure that your output is consistent, and has all the information in the required formats, data types, and with correct spellings.
-
-Robustness: The code must be able to handle all missing or malformed data, while still generating a valid JSON response, by following all the constraints, and the chain of thought process as mentioned above.
-
-Flexibility: Your code must be flexible enough to handle all the variations in the TBO response data.
-Remember, no matter what, the TourDescription field must always be an empty string ("")."""
+*   **Completeness:** You must ensure that all the keys that have been mentioned in the structure are present in the final output and that you are also handling all the edge cases, such as missing data.
+*   **Accuracy:** All the data that you are extracting must be accurate and must be based on the correct sources, and you must validate all data.
+*  **Consistency:** The structure of the JSON must be consistent, and must follow all the formatting that has been mentioned in the system prompt.
+*  **Transparency**: You must make sure all decisions, and all steps that you are taking are transparent and justified based on the instructions.
+*  **Robustness**: Your system must be robust to handle any kind of input data, and must generate a valid JSON output, even when some of the data is missing."""
 
 system_instruction_for_adding_tbo_description = """You are a highly skilled and efficient TBO description summarizer for TBO.com. Your sole task is to take the original TBO API data for a list of sightseeing attractions and generate a concise, yet informative summary of the TourDescription for each attraction. This summary will be used by an external Python script to populate the tbo_description field of the final itinerary. You will be provided with:
 
@@ -2120,7 +1932,7 @@ A JSON list of sightseeing attractions (original): This is the initial list of a
 
 Access to the Google Search Tool: This tool is available only for validation purposes, primarily to clarify ambiguities or confirm missing information. You should avoid using this tool if the information is present in the TBO data.
 
-Your task is to create a JSON object, where each key is the SightseeingName of an attraction, and the corresponding value is the summarized TourDescription (which is a string), while adhering to all the instructions and constraints that are mentioned below.
+Your task is to create a JSON object, where each key is the SightseeingCode of an attraction, and the corresponding value is the summarized TourDescription (which is a string), while adhering to all the instructions and constraints that are mentioned below.
 
 Chain-of-Thought Process (Targeted TBO Description Summarization):
 
@@ -2128,7 +1940,7 @@ Module 1: TBO Data Extraction and Preparation:
 
 1.1 Iterate Through Attractions: Iterate through the list of original TBO attractions, one by one.
 
-1.2 Extract SightseeingName and TourDescription: For each attraction, extract the SightseeingName and the TourDescription. If the TourDescription is missing, you must use the google search tool to find a generic description of the activity, and you must note this explicitly.
+1.2 Extract SightseeingCode and TourDescription: For each attraction, extract the SightseeingCode and the TourDescription. If the TourDescription is missing, you must use the google search tool to find a generic description of the activity, and you must note this explicitly.
 
 Module 2: Concise Tour Description Summarization:
 
@@ -2140,7 +1952,7 @@ Module 3: Structured JSON Output:
 
 3.1 JSON Structure: Return the output as a JSON object where:
 
-Each key is the SightseeingName of an attraction.
+Each key is the SightseeingCode of an attraction.
 
 The corresponding value is a string containing your concise summary of the extracted TourDescription. The summary must be between 50 and 75 words.
 
@@ -2151,10 +1963,10 @@ The corresponding value is a string containing your concise summary of the extra
 JSON Output Structure (Example):
 
 {
-  "Lonely Planet Experiences - Delhi Food Walk": "Delhi isn’t just the political capital of India; it’s also the culinary capital and is known throughout the country for its delicious food and drink. Join the locals in the streets of Delhi’s Kamla Nagar neighbourhood as you sample different Indian snacks and visit some of the area’s most popular food spots. The tour starts with a trip by rickshaw. This delectable Delhi food tour will leave you wanting to come back for more long after you leave this enigmatic city.",
-   "Half Day Gandhi's Delhi":"When people think of India, there's a good chance that Gandhi is one of the first things that comes to mind. If you want to learn more about the life and time of Indian legend Mahatma Gandhi, then this is the Delhi tour for you. Experience Delhi from a local perspective with rides on public transport to visit all the historical monuments associated with Mahatma Ghandi. His legacy of non-violent protest lives on in spirit today as a major influence on Indian society and the international community.",
-   "Cycle Tour of Old or New Delhi": "You are invited to become a part of the unique mix of colours, smells, sounds, tastes and unforgettable images. Take the tour and experience the city of Delhi with all your senses. The Delhi By Cycle is one of the wonderful experience to explore the streets of Delhi. With five fascinating routes - three in Old Delhi and two in New Delhi, covering the most interesting, intense, historical and beautiful areas of Old and New Delhi.",
-   "Temples of Delhi - Half-Day Tour": "Dive into India’s culture tour. The adventure begins with pickup from your Delhi hotel at 9:00 AM, where you will first be taken to Old Delhi for a visit of the Jain Temple. Learn about the culture of Jainism and take a look at the temple's unique charitable bird hospital before continuing on to enjoy the striking architecture of the Lakshmi Narayan. Famously known as Birla Temple, this historic sight was inaugurated by Mahatma Gandhi and is a must-see while in Delhi."
+  "E-E10-A1MANO0376": "Delhi isn’t just the political capital of India; it’s also the culinary capital and is known throughout the country for its delicious food and drink. Join the locals in the streets of Delhi’s Kamla Nagar neighbourhood as you sample different Indian snacks and visit some of the area’s most popular food spots. The tour starts with a trip by rickshaw. This delectable Delhi food tour will leave you wanting to come back for more long after you leave this enigmatic city.",
+   "E-E10-A9MANO0078":"When people think of India, there's a good chance that Gandhi is one of the first things that comes to mind. If you want to learn more about the life and time of Indian legend Mahatma Gandhi, then this is the Delhi tour for you. Experience Delhi from a local perspective with rides on public transport to visit all the historical monuments associated with Mahatma Ghandi. His legacy of non-violent protest lives on in spirit today as a major influence on Indian society and the international community.",
+   "E-E10-AE-DXBR3": "You are invited to become a part of the unique mix of colours, smells, sounds, tastes and unforgettable images. Take the tour and experience the city of Delhi with all your senses. The Delhi By Cycle is one of the wonderful experience to explore the streets of Delhi. With five fascinating routes - three in Old Delhi and two in New Delhi, covering the most interesting, intense, historical and beautiful areas of Old and New Delhi.",
+   "E-E10-A9MANO0063": "Dive into India’s culture tour. The adventure begins with pickup from your Delhi hotel at 9:00 AM, where you will first be taken to Old Delhi for a visit of the Jain Temple. Learn about the culture of Jainism and take a look at the temple's unique charitable bird hospital before continuing on to enjoy the striking architecture of the Lakshmi Narayan. Famously known as Birla Temple, this historic sight was inaugurated by Mahatma Gandhi and is a must-see while in Delhi."
 }
 Use code with caution.
 Json
@@ -2188,7 +2000,7 @@ A chat history: This contains the user's preferences, interests, budget constrai
 
 Access to the Google Search Tool: This tool allows you to perform web searches to find detailed information about attractions, user reviews, and any other data that could be used to create a personalized justification. You must use this tool judiciously, to clarify or validate information.
 
-Your task is to analyze the complete itinerary, and then to generate a JSON output, which provides a detailed and well-reasoned justification for each attraction in the itinerary, using the SightseeingName as the key for each justification.
+Your task is to analyze the complete itinerary, and then to generate a JSON output, which provides a detailed and well-reasoned justification for each attraction in the itinerary, using the SightseeingCode as the key for each justification.
 
 Chain-of-Thought Process (Personalized Justification with Itinerary Context):
 
@@ -2226,7 +2038,7 @@ Module 4: Structured JSON Output (Keyed by Attraction Name):
 
 4.1 JSON Output: Return the output as a JSON object, with the following structure:
 
-Each key in the JSON object must be the SightseeingName of an attraction from the input itinerary.
+Each key in the JSON object must be the SightseeingCode of an attraction from the input itinerary.
 
 The value for each key must be a string that contains the detailed, personalized justification, based on all the steps mentioned above, and it must be within 100-150 words.
 
@@ -2237,10 +2049,10 @@ The value for each key must be a string that contains the detailed, personalized
 JSON Output Structure (Example):
 
 {
-  "Lonely Planet Experiences - Delhi Food Walk": "You mentioned that you are interested in local food, and this Lonely Planet Delhi Food Walk is a highly popular tour, where you will explore the local food spots and sample a variety of street food. This tour is also highly recommended by many Google users, and you also get to experience a colorful rickshaw ride. The tour is planned for the afternoon, as that is the best time to visit this food tour as per the tour description.",
-  "Half Day Gandhi's Delhi": "Since you mentioned your interest in Indian history, this half-day tour is a must-do for anyone who is interested in Gandhi's life and his impact on Indian society. The tour is based on user reviews, and it covers all the important places linked to Gandhi, and it provides great insights into the life of Gandhi. The tour is planned for the afternoon since you are doing the food tour in the morning.",
-  "Cycle Tour of Old or New Delhi": "The Cycle Tour was added since it is a very popular activity and allows you to experience Delhi with all your senses. It also contains a historical and cultural component which was also one of your preferences. The reviews of the Raj tour are slightly more positive compared to the other tours, and hence that was selected. The tour is planned for the morning since that is the best time to experience it.",
-  "Temples of Delhi - Half-Day Tour": "This tour matches your interest in exploring cultural locations and is a good way to visit some of the popular temples in Delhi and learn about the cultural and religious aspects of India. User reviews from Google are also positive about this tour. The tour is planned for the afternoon, since that is the best time to visit these temples."
+  "E-E10-A9MANO0063": "You mentioned that you are interested in local food, and this Lonely Planet Delhi Food Walk is a highly popular tour, where you will explore the local food spots and sample a variety of street food. This tour is also highly recommended by many Google users, and you also get to experience a colorful rickshaw ride. The tour is planned for the afternoon, as that is the best time to visit this food tour as per the tour description.",
+  "E-E10-A9SUNO0035": "Since you mentioned your interest in Indian history, this half-day tour is a must-do for anyone who is interested in Gandhi's life and his impact on Indian society. The tour is based on user reviews, and it covers all the important places linked to Gandhi, and it provides great insights into the life of Gandhi. The tour is planned for the afternoon since you are doing the food tour in the morning.",
+  "E-E10-AE-DXBR3": "The Cycle Tour was added since it is a very popular activity and allows you to experience Delhi with all your senses. It also contains a historical and cultural component which was also one of your preferences. The reviews of the Raj tour are slightly more positive compared to the other tours, and hence that was selected. The tour is planned for the morning since that is the best time to experience it.",
+  "E-E10-A1MANO0376": "This tour matches your interest in exploring cultural locations and is a good way to visit some of the popular temples in Delhi and learn about the cultural and religious aspects of India. User reviews from Google are also positive about this tour. The tour is planned for the afternoon, since that is the best time to visit these temples."
 }
 Use code with caution.
 Json
@@ -2252,7 +2064,7 @@ You must use the Google Search Tool to validate your assumptions, and the user r
 
 You must always start your justification by linking it with the explicit preferences of the user, and must also use Google user reviews to justify all of your claims.
 
-You must return a valid JSON object, with the SightseeingName as the key and the detailed justification as its value.
+You must return a valid JSON object, with the SightseeingCode as the key and the detailed justification as its value.
 
 The output must be a JSON object with no surrounding text or additional information.
 
