@@ -1,10 +1,13 @@
 from datetime import datetime
+import threading
 
 from fastapi import FastAPI, Cookie, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.models import Response
 from pydantic import BaseModel
 from starlette.responses import RedirectResponse, JSONResponse
+import sightseeing_llm_queries as llm
+import services
 
 import firebase_handler as fh
 import geminiFunctions as gemini
@@ -48,10 +51,14 @@ async def updateNextInitial(sessionid: str):
         return -1
     response = gemini.next_message_for_initial_chat(history)
     if ("Received hihihiha" in response):
+        realhist = history.copy()
         history.append({"role": "model", "parts": [{"text": response}]})
-        history.append({"role": "user", "parts": [{"text": "Please give me a summary of my trip again"}]})
+        history.append({"role": "user", "parts": [{"text": "Please give me a summary of my trip again as a json."}]})
         response = gemini.next_message_for_initial_chat(history)
         fh.add_summary(sessionid, response)
+        realhist = realhist[0:-2]
+        thread = threading.Thread(target=services.additinerary, args=(realhist, sessionid))
+        thread.start()
         return {'status': 'chat finished'}
     fh.add_message_to_first_chat("model", sessionid, response)
     return "ok"
@@ -110,7 +117,7 @@ async def createGroup(request: Request):
     idToken = request.cookies.get("session")
     userid = fh.get_uid(idToken)
     try:
-        return {"groupId": fh.create_session(userid)}
+        return {"groupId": fh.create_group(userid)}
     except:
         return {"groupId": None}
 
@@ -141,19 +148,23 @@ async def authenticateSession(request: Request):
     print("cookie is", cookie)
     return {"session": fh.verify_session_cookie(cookie)}
 
+
 @app.get("/getGroups")
 async def getGroups(request: Request):
     cookie = request.cookies.get("session")
     uid = fh.get_uid(cookie)
     return fh.get_groups(uid)
 
+
 @app.get("/getGroupName")
 async def getGroupName(groupId: str):
     return {"name": fh.get_group_name(groupId)}
 
+
 @app.get("/getGroupMemberCount")
 async def getGroupMemberCount(groupId: str):
     return {"count": fh.get_group_member_count(groupId)}
+
 
 @app.get("/leaveGroup")
 async def leaveGroup(groupId: str, request: Request):
@@ -161,6 +172,7 @@ async def leaveGroup(groupId: str, request: Request):
     userid = fh.get_uid(cookie)
     fh.group_leave(groupId, userid)
     return {"status": "ok"}
+
 
 @app.get("/joinGroup")
 async def joinGroup(groupId: str, request: Request):
@@ -171,3 +183,18 @@ async def joinGroup(groupId: str, request: Request):
     fh.group_join(groupId, userid)
 
     return {"status": "ok"}
+
+
+@app.get("/signOut")
+async def signOut():
+    response = JSONResponse(content={"status": "ok"}, status_code=200)
+    response.set_cookie(
+        key="session",
+        value="",
+        samesite="lax",
+        secure=False,
+        httponly=True,
+        path="/",
+        max_age=0
+    )
+    return response

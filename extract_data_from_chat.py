@@ -21,7 +21,7 @@ def get_country_code(history, chat=None):
     system_instruction = system_instruction_for_getting_country_code
     newHistory, newChat, __ = start_chat(system_instruction)
     newHistory,chat = send_message(f"Based on this chat history, and the given json, extract the country code. json : {country_list}. \n\n chat history : {history}", newHistory, newChat, system_instruction)
-    return newHistory[-1]["parts"][0]
+    return newHistory[-1]["parts"][0]["text"]
 
 # country_code = get_country_code(history, chat)
 # print(country_code)
@@ -36,11 +36,10 @@ def create_user_detail_json(history, chat=None):
     city_list = get_city_list(country_code)
     print(city_list)
     newHistory, newChat = send_message(f"Based on the given country code, and the city list, give me the final json. You're supposed to check if the country code is correctly populated, and the CityId is correctly populated.Note that Country Code is a two letter word, for example AE for Dubai. City code is a 6 digit numeric string, for example 148767 for Yelagiri, Tamil Nadu. In case there are multiple cities, add them as a list and in case there are multiple countries, add them as a list too. Country code : {country_code}, CityList : {city_list}", newHistory, newChat, system_instruction)
-    return newHistory[-1]["parts"][0]
+    return newHistory[-1]["parts"][0]["text"]
 
 def get_user_json(history):
     chat = None
-    print(history)
     js = create_user_detail_json(history, chat)
 
 

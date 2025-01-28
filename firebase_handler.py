@@ -16,17 +16,20 @@ sessions_ref = db.collection("sessions")
 
 def create_user(name, email, userid):
     for doc in users_ref.get():
-        if userid==doc.id:
+        if userid == doc.id:
             return
     users_ref.document(userid).set({'name': name, 'email': email, 'sessions': []})
 
 
-def create_session(userid):
+def create_group(userid):
     ssid = current_milli_time()
     a = users_ref.document(userid).get().to_dict()['sessions']
     a.append(ssid)
     users_ref.document(userid).update({'sessions': a})
     sessions_ref.document(ssid).set({'owner': userid})
+    a = [userid]
+    sessions_ref.document(ssid).update({'users': a})
+    print("returning: ", ssid)
     return ssid
 
 
@@ -66,15 +69,17 @@ def add_activities(sessionid, activities):
         sessions_ref.document(sessionid).collection("activities").document(current_milli_time()).set(activity)
 
 
-def add_activity_to_itinerary(sessionid, activity, time):
-    sessions_ref.document(sessionid).collection("itinerary").document(time).set(activity)
+def add_activity_to_itinerary(sessionid, activity):
+    sessions_ref.document(sessionid).collection("itinerary").document(current_milli_time()).set(activity)
 
+def set_status(sessionid, status):
+    sessions_ref.document(sessionid).update({'status': status})
 
 def get_full_itinerary(sessionid):
     arr = []
     docs = sessions_ref.document(sessionid).collection("itinerary").stream()
     for doc in docs:
-        arr.append([doc.id, doc.to_dict()])
+        arr.append(doc.to_dict())
     return arr
 
 
@@ -138,19 +143,28 @@ def get_group_name(groupId):
 
 
 def get_group_member_count(groupId):
-    return 1
+    a = sessions_ref.document(groupId).get().to_dict()['users']
+    return len(a)
 
 
 def group_leave(groupId, userid):
     arr = users_ref.document(userid).get().to_dict()['sessions']
     arr.remove(groupId)
     users_ref.document(userid).update({'sessions': arr})
+    arr = sessions_ref.document(groupId).get().to_dict()['users']
+    arr.remove(userid)
+    sessions_ref.document(groupId).update({'users': arr})
 
 
 def group_join(groupId, userid):
     a = users_ref.document(userid).get().to_dict()['sessions']
     a.append(groupId)
     users_ref.document(userid).update({'sessions': a})
+    # Added to user now adding to group
+    a = sessions_ref.document(groupId).get().to_dict()['users']
+    a.append(userid)
+    print("should be added now")
+    sessions_ref.document(groupId).update({'users': a})
 
 
 def check_group_existance(groupId):

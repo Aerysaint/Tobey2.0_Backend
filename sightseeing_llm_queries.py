@@ -10,12 +10,17 @@ from extract_data_from_chat import get_user_json
 from geminiFunctions import *
 from prompts_and_sys_instructions import *
 import json
+import firebase_handler as fh
+import services
+import threading
 
-with open("attractions.txt", encoding="utf-8") as f:
-    attractions = f.read()
 
-with open("init_chat_history.txt") as f:
-    chat_history = (f.read())
+
+# with open("attractions.txt", encoding="utf-8") as f:
+#     attractions = f.read()
+#
+# with open("init_chat_history.txt") as f:
+#     chat_history = (f.read())
 
 def retry_until_success(func, *args):
     while True:
@@ -23,94 +28,133 @@ def retry_until_success(func, *args):
             return func(*args)
         except Exception as e:
             print(f"Error: {e}. Retrying...")
+
+
 def shortlist_attractions(attractions_list, chat_history):
     system_instruction = system_instruction_for_shortlisting_attractions
     history, chat, _ = start_chat(system_instruction)
-    history, chat = send_message(f"Based on the given chat history and attractions list, shortlist the attractions. Attractions list : {attractions_list} \n\n chat history : {chat_history} ", history, chat, system_instruction)
+    history, chat = send_message(
+        f"Based on the given chat history and attractions list, shortlist the attractions. Attractions list : {attractions_list} \n\n chat history : {chat_history} ",
+        history, chat, system_instruction)
     return history[-1]["parts"][0]["text"]
 
 
 def cluster_groups_by_geographical_data(attractions_list, chat_history):
     system_instruction = system_instruction_for_clustering_attractions_geographically
     history, chat, _ = start_chat(system_instruction)
-    history, chat = send_message(f"Based on the given chat history and attractions list, cluster the attractions based on their geographical data. Attractions list : {attractions_list} \n\n chat history : {chat_history} ", history, chat, system_instruction)
+    history, chat = send_message(
+        f"Based on the given chat history and attractions list, cluster the attractions based on their geographical data. Attractions list : {attractions_list} \n\n chat history : {chat_history} ",
+        history, chat, system_instruction)
     return history[-1]["parts"][0]["text"]
+
 
 def get_timings_for_attractions(attractions_list, chat_history):
     system_instruction = system_instruction_for_getting_best_times_to_visit
     history, chat, _ = start_chat(system_instruction)
-    history, chat = send_message(f"Based on the given chat history and attractions list, give the best times for the attractions based on the api results and google saerch and your training data. Attractions list : {attractions_list} \n\n chat history : {chat_history} ", history, chat, system_instruction)
+    history, chat = send_message(
+        f"Based on the given chat history and attractions list, give the best times for the attractions based on the api results and google saerch and your training data. Attractions list : {attractions_list} \n\n chat history : {chat_history} ",
+        history, chat, system_instruction)
     return history[-1]["parts"][0]["text"]
+
 
 def get_budget_reasoning_for_attractions(attractions_list, chat_history):
     system_instruction = system_instruction_for_budget_reasoning
     history, chat, _ = start_chat(system_instruction)
-    history, chat = send_message(f"Based on the given chat history and attractions list, give the budget based attractions. Attractions list : {attractions_list} \n\n chat history : {chat_history} ", history, chat, system_instruction)
+    history, chat = send_message(
+        f"Based on the given chat history and attractions list, give the budget based attractions. Attractions list : {attractions_list} \n\n chat history : {chat_history} ",
+        history, chat, system_instruction)
     return history[-1]["parts"][0]["text"]
 
-def get_day_wise_itinerary(chat_history, geographical_reasoning, time_based_reasoning, budget_reasoning, attractions, shortlisted_attractions, duration_analysis):
+
+def get_day_wise_itinerary(chat_history, geographical_reasoning, time_based_reasoning, budget_reasoning, attractions,
+                           shortlisted_attractions, duration_analysis):
     system_instruction = system_instruction_for_day_wise_planning
     history, chat, _ = start_chat(system_instruction)
-    history, chat = send_message(f"Based on the given chat history, geographical reasoning, time based reasoning ,budget reasoning, duration analysis, original(complete attractions list) and shortlisted_attraction list(done by another llm based on what it thought are user's preferences) give the day wise itinerary. \n\n chat history : {chat_history} \n\n geographical reasoning : {geographical_reasoning} \n\n time based reasoning : {time_based_reasoning} \n\n budget reasoning : {budget_reasoning} \n\n duration analysis : {duration_analysis} \n\n original attractions list : {attractions}, \n\n shortlisted attractions : {shortlisted_attractions}", history, chat, system_instruction)
+    history, chat = send_message(
+        f"Based on the given chat history, geographical reasoning, time based reasoning ,budget reasoning, duration analysis, original(complete attractions list) and shortlisted_attraction list(done by another llm based on what it thought are user's preferences) give the day wise itinerary. \n\n chat history : {chat_history} \n\n geographical reasoning : {geographical_reasoning} \n\n time based reasoning : {time_based_reasoning} \n\n budget reasoning : {budget_reasoning} \n\n duration analysis : {duration_analysis} \n\n original attractions list : {attractions}, \n\n shortlisted attractions : {shortlisted_attractions}",
+        history, chat, system_instruction)
     return history[-1]["parts"][0]["text"]
+
 
 def summarise_attractions(attractions_list, chat_history):
     system_instruction = system_instruction_for_summarising_search_json
     history, chat, _ = start_chat(system_instruction)
-    history, chat = send_message(f"Based on the given chat history and attractions list, summarise the attractions. Keep in mind that your output is the input for other llm agents which will perform further analysis on the attractions so your description of the attraction must be detailed enough for it to be helpful to any and all cases of analysis. Attractions list : {attractions_list} \n\n chat history : {chat_history} ", history, chat, system_instruction)
+    history, chat = send_message(
+        f"Based on the given chat history and attractions list, summarise the attractions. Keep in mind that your output is the input for other llm agents which will perform further analysis on the attractions so your description of the attraction must be detailed enough for it to be helpful to any and all cases of analysis. Attractions list : {attractions_list} \n\n chat history : {chat_history} ",
+        history, chat, system_instruction)
     return history[-1]["parts"][0]["text"]
+
 
 def remove_redundant_attractions(summarised_attractions_list, chat_history):
     system_instruction = system_instruction_for_removing_redundant_attractions
     history, chat, _ = start_chat(system_instruction)
-    history, chat = send_message(f"Based on the given chat history and attractions list, remove the redundant attractions. Attractions list : {summarised_attractions_list} \n\n chat history : {chat_history} ", history, chat, system_instruction)
+    history, chat = send_message(
+        f"Based on the given chat history and attractions list, remove the redundant attractions. Attractions list : {summarised_attractions_list} \n\n chat history : {chat_history} ",
+        history, chat, system_instruction)
     return history[-1]["parts"][0]["text"]
+
 
 def get_duration_analysis_of_attractions(summarised_attractions, chat_history):
     system_instruction = system_instruction_for_duration_analysis
     history, chat, _ = start_chat(system_instruction)
-    history, chat = send_message(f"Based on the given chat history and attractions list, give the duration analysis of the attractions. Attractions list : {summarised_attractions} \n\n chat history : {chat_history} ", history, chat, system_instruction)
+    history, chat = send_message(
+        f"Based on the given chat history and attractions list, give the duration analysis of the attractions. Attractions list : {summarised_attractions} \n\n chat history : {chat_history} ",
+        history, chat, system_instruction)
     return history[-1]["parts"][0]["text"]
 
-def get_intraday_planning(attractions, chat_history, day_wise_itinerary, duration_analysis, clustered_attractions, time_based_attrations):
+
+def get_intraday_planning(attractions, chat_history, day_wise_itinerary, duration_analysis, clustered_attractions,
+                          time_based_attrations):
     system_instruction = system_instruction_for_intraday_planning
     history, chat, _ = start_chat(system_instruction)
-    history, chat = send_message(f"Based on the given chat history, attractions, day wise itinerary, duration analysis, clustered attractions, time based attractions and budget reasoned attractions, give the intraday planning. \n\n chat history : {chat_history} \n\n attractions : {attractions} \n\n day wise itinerary : {day_wise_itinerary} \n\n duration analysis : {duration_analysis} \n\n clustered attractions : {clustered_attractions} \n\n time based attractions : {time_based_attrations} \n\n", history, chat, system_instruction)
+    history, chat = send_message(
+        f"Based on the given chat history, attractions, day wise itinerary, duration analysis, clustered attractions, time based attractions and budget reasoned attractions, give the intraday planning. \n\n chat history : {chat_history} \n\n attractions : {attractions} \n\n day wise itinerary : {day_wise_itinerary} \n\n duration analysis : {duration_analysis} \n\n clustered attractions : {clustered_attractions} \n\n time based attractions : {time_based_attrations} \n\n",
+        history, chat, system_instruction)
     return history[-1]["parts"][0]["text"]
+
 
 def add_free_attractions_on_route(chat_history, day_wise_itinerary):
     system_instruction = system_instruction_for_free_attraction_addition
     history, chat, _ = start_chat(system_instruction)
-    history, chat = send_message(f"Based on the given chat history and day wise itinerary, add the free attractions on the route. \n\n chat history : {chat_history} \n\n day wise itinerary : {day_wise_itinerary} ", history, chat, system_instruction)
+    history, chat = send_message(
+        f"Based on the given chat history and day wise itinerary, add the free attractions on the route. \n\n chat history : {chat_history} \n\n day wise itinerary : {day_wise_itinerary} ",
+        history, chat, system_instruction)
     return history[-1]["parts"][0]["text"]
+
 
 def get_route_to_be_followed(chat_history, current_itinerary, free_attractions):
     system_instruction = system_instruction_for_route_planning
     history, chat, _ = start_chat(system_instruction)
-    history, chat = send_message(f"Based on the given chat history, free attractions and current itinerary, give the route to be followed. \n\n chat history : {chat_history} \n\n current itinerary : {current_itinerary}, \n\n free attractions : {free_attractions} ", history, chat, system_instruction)
+    history, chat = send_message(
+        f"Based on the given chat history, free attractions and current itinerary, give the route to be followed. \n\n chat history : {chat_history} \n\n current itinerary : {current_itinerary}, \n\n free attractions : {free_attractions} ",
+        history, chat, system_instruction)
     return history[-1]["parts"][0]["text"]
+
 
 def add_restaurants_on_route(chat_history, current_itinerary):
     system_instruction = system_instruction_for_adding_restaurants_on_the_route
     history, chat, _ = start_chat(system_instruction)
-    history, chat = send_message(f"Based on the given chat history and current itinerary, add the restaurants on the route. \n\n chat history : {chat_history} \n\n current itinerary : {current_itinerary} ", history, chat, system_instruction)
+    history, chat = send_message(
+        f"Based on the given chat history and current itinerary, add the restaurants on the route. \n\n chat history : {chat_history} \n\n current itinerary : {current_itinerary} ",
+        history, chat, system_instruction)
     return history[-1]["parts"][0]["text"]
 
-def get_itinerary_json(itinerary, attractions, chat_history, shortlisted_attractions,  num_days):
+
+def get_itinerary_json(itinerary, attractions, chat_history, shortlisted_attractions, num_days):
     final_json = []
     for i in range(num_days):
         system_instruction = system_instruction_for_getting_itinerary_json
         history, chat, _ = start_chat(system_instruction)
-        history, chat = send_message(f"Based on the given chat history, itinerary, attractions with their justifications for the user and tbo's api data for searching attractions in the given city, create the json for day {i+1}. \n\n tbo's api result : {attractions} \n\n itinerary : {itinerary}, \n\n chat history : {chat_history} \n\n justifications : {shortlisted_attractions}", history, chat, system_instruction)
+        history, chat = send_message(
+            f"Based on the given chat history, itinerary, attractions with their justifications for the user and tbo's api data for searching attractions in the given city, create the json for day {i + 1}. \n\n tbo's api result : {attractions} \n\n itinerary : {itinerary}, \n\n chat history : {chat_history} \n\n justifications : {shortlisted_attractions}",
+            history, chat, system_instruction)
         output_json = history[-1]["parts"][0]["text"]
         str_json = str(output_json)
-        if(str_json[0] == '`'):
+        if (str_json[0] == '`'):
             str_json = str_json[7:]
             str_json = str_json[:-4]
         output_json = convert_string_to_json(str_json)
         final_json.append(output_json)
-        print("Printing final json")
-        print(final_json)
         time.sleep(5)
     return final_json
 
@@ -118,16 +162,23 @@ def get_itinerary_json(itinerary, attractions, chat_history, shortlisted_attract
 def get_tbo_description(output_json, attractions):
     system_instruction = system_instruction_for_adding_tbo_description
     history, chat, _ = start_chat(system_instruction)
-    history, chat = send_message(f"Based on the given output json and attractions, add the tbo description to the attractions. \n\n output json : {output_json} \n\n attractions : {attractions} ", history, chat, system_instruction)
+    history, chat = send_message(
+        f"Based on the given output json and attractions, add the tbo description to the attractions. \n\n output json : {output_json} \n\n attractions : {attractions} ",
+        history, chat, system_instruction)
     return history[-1]["parts"][0]["text"]
+
 
 def get_llm_description(chat_history, itinerary):
     system_instruction = system_instruction_for_getting_llm_justifications
     history, chat, _ = start_chat(system_instruction)
-    history, chat = send_message(f"Based on the given chat history and itinerary, give the llm description. \n\n chat history : {chat_history} \n\n itinerary : {itinerary} ", history, chat, system_instruction)
+    history, chat = send_message(
+        f"Based on the given chat history and itinerary, give the llm description. \n\n chat history : {chat_history} \n\n itinerary : {itinerary} ",
+        history, chat, system_instruction)
     return history[-1]["parts"][0]["text"]
 
+
 import json
+
 
 def populate_tbo_descriptions(itinerary_json, tbo_description_json):
     """
@@ -160,17 +211,23 @@ def populate_tbo_descriptions(itinerary_json, tbo_description_json):
                 if 'SightseeingName' in activity and activity['SightseeingName'] in tbo_descriptions:
                     activity['tbo_description'] = tbo_descriptions[activity['SightseeingName']]
                 else:
-                    print(f"Warning: No matching TBO description found for activity: {activity.get('SightseeingName', 'Unknown')}, skipped")
-        elif isinstance(day_data, dict) and 'intraday_plan' in day_data :
+                    pass
+                    # print(
+                    #     f"Warning: No matching TBO description found for activity: {activity.get('SightseeingName', 'Unknown')}, skipped")
+        elif isinstance(day_data, dict) and 'intraday_plan' in day_data:
             for time_slot, slot_data in day_data['intraday_plan'].items():
                 if isinstance(slot_data, dict) and 'attractions' in slot_data:
                     for activity in slot_data['attractions']:
                         if 'SightseeingName' in activity and activity['SightseeingName'] in tbo_descriptions:
                             activity['tbo_description'] = tbo_descriptions[activity['SightseeingName']]
                         else:
-                            print(f"Warning: No matching TBO description found for activity: {activity.get('SightseeingName', 'Unknown')}, skipped")
+                            pass
+                            # print(
+                            #     f"Warning: No matching TBO description found for activity: {activity.get('SightseeingName', 'Unknown')}, skipped")
 
     return json.dumps(itinerary, indent=2)
+
+
 def populate_llm_descriptions(itinerary_json, llm_description_json):
     """
     Populates the 'llm_description' field of each attraction in a TBO-like itinerary JSON object.
@@ -196,14 +253,15 @@ def populate_llm_descriptions(itinerary_json, llm_description_json):
     if 'complete_itinerary' not in itinerary:
         raise ValueError("Invalid itinerary json, 'complete_itinerary' key not found")
 
-
     for day, day_data in itinerary['complete_itinerary'].items():
         if isinstance(day_data, list):
             for activity in day_data:
                 if 'SightseeingName' in activity and activity['SightseeingName'] in llm_descriptions:
                     activity['llm_description'] = llm_descriptions[activity['SightseeingName']]
                 else:
-                    print(f"Warning: No matching LLM description found for activity: {activity.get('SightseeingName', 'Unknown')}, skipping.")
+                    pass
+                    # print(
+                    #     f"Warning: No matching LLM description found for activity: {activity.get('SightseeingName', 'Unknown')}, skipping.")
         elif isinstance(day_data, dict) and 'intraday_plan' in day_data:
             for time_slot, slot_data in day_data['intraday_plan'].items():
                 if isinstance(slot_data, dict) and 'attractions' in slot_data:
@@ -211,13 +269,13 @@ def populate_llm_descriptions(itinerary_json, llm_description_json):
                         if 'SightseeingName' in activity and activity['SightseeingName'] in llm_descriptions:
                             activity['llm_description'] = llm_descriptions[activity['SightseeingName']]
                         else:
-                            print(f"Warning: No matching LLM description found for activity: {activity.get('SightseeingName', 'Unknown')}, skipping.")
+                            pass
+                            # print(
+                            #     f"Warning: No matching LLM description found for activity: {activity.get('SightseeingName', 'Unknown')}, skipping.")
     return json.dumps(itinerary, indent=2)
 
 
-
-
-print(attractions)
+# print(attractions)
 
 # summarised_attractions = retry_until_success(summarise_attractions, attractions, chat_history)
 #
@@ -275,12 +333,11 @@ def populate_tbo_descriptions(itinerary_json, tbo_descriptions):
     """
     for curr_attraction in tbo_descriptions:
         for day in itinerary_json:
-            print("Printing day\n")
-            print(day)
             for activity in itinerary_json[day]:
                 if activity['SightseeingCode'] == curr_attraction:
                     activity['tbo_description'] = tbo_descriptions[curr_attraction]
     return itinerary_json
+
 
 def populate_llm_descriptions(itinerary_json, llm_descriptions):
     """
@@ -293,16 +350,14 @@ def populate_llm_descriptions(itinerary_json, llm_descriptions):
     Returns:
         dict: Updated itinerary JSON with TBO descriptions
     """
-    print(type(itinerary_json))
-    print(type(llm_descriptions))
     for curr_attraction in llm_descriptions:
         for day in itinerary_json:
             for activities in itinerary_json[day]:
                 for activity in itinerary_json[day][activities]:
-                    print(activity)
                     if activity['SightseeingCode'] == curr_attraction:
                         activity['llm_description'] = llm_descriptions[curr_attraction]
     return itinerary_json
+
 
 # tbo_descriptions = get_tbo_description(output_json, attractions)
 #
@@ -325,26 +380,50 @@ def populate_llm_descriptions(itinerary_json, llm_descriptions):
 # with open("itinerary.json", "w") as f:
 #     json.dump(output_json, f)
 
-def get_itinerary_after_chat(chat_history):
+
+def get_itinerary_after_chat(chat_history, sessionid):
+    fh.set_status(sessionid, "Finding attractions for you")
     attractions = retry_until_success(get_user_json, chat_history)
+    thread = threading.Thread(target=services.addAllAttractions, args=(attractions, sessionid))
+    thread.start()
     summarised_attractions = retry_until_success(summarise_attractions, attractions, chat_history)
-    redundancy_removed_attractions = retry_until_success(remove_redundant_attractions, summarised_attractions, chat_history)
+    fh.set_status(sessionid, "Removing repetitions")
+    redundancy_removed_attractions = retry_until_success(remove_redundant_attractions, summarised_attractions,
+                                                         chat_history)
+    fh.set_status(sessionid, "Shortlisting attractions for you")
     shortlisted_attractions = retry_until_success(shortlist_attractions, redundancy_removed_attractions, chat_history)
+    fh.set_status(sessionid, "Analysing time required for each attraction")
     duration_analysis = retry_until_success(get_duration_analysis_of_attractions, shortlisted_attractions, chat_history)
-    clustered_attractions = retry_until_success(cluster_groups_by_geographical_data, shortlisted_attractions, chat_history)
+    fh.set_status(sessionid, "Clustering attractions")
+    clustered_attractions = retry_until_success(cluster_groups_by_geographical_data, shortlisted_attractions,
+                                                chat_history)
+    fh.set_status(sessionid, "Finding best times to visit")
     time_based_attractions = retry_until_success(get_timings_for_attractions, shortlisted_attractions, chat_history)
-    budget_reasoned_attractions = retry_until_success(get_budget_reasoning_for_attractions, shortlisted_attractions, chat_history)
-    day_wise_itinerary = retry_until_success(get_day_wise_itinerary, chat_history, clustered_attractions, time_based_attractions, budget_reasoned_attractions, attractions, shortlisted_attractions, duration_analysis)
+    fh.set_status(sessionid, "Analysing budget")
+    budget_reasoned_attractions = retry_until_success(get_budget_reasoning_for_attractions, shortlisted_attractions,
+                                                      chat_history)
+    fh.set_status(sessionid, "Getting itinerary's first draft")
+    day_wise_itinerary = retry_until_success(get_day_wise_itinerary, chat_history, clustered_attractions,
+                                             time_based_attractions, budget_reasoned_attractions, attractions,
+                                             shortlisted_attractions, duration_analysis)
+    fh.set_status(sessionid, "Refining itinerary")
     free_attractions_added = retry_until_success(add_free_attractions_on_route, chat_history, day_wise_itinerary)
-    intraday_planning = retry_until_success(get_intraday_planning, attractions, chat_history, day_wise_itinerary, duration_analysis, clustered_attractions, time_based_attractions)
-    route_to_be_followed = retry_until_success(get_route_to_be_followed, chat_history, intraday_planning, free_attractions_added)
+    fh.set_status(sessionid, "Figuring out what to do when")
+    intraday_planning = retry_until_success(get_intraday_planning, attractions, chat_history, day_wise_itinerary,
+                                            duration_analysis, clustered_attractions, time_based_attractions)
+    fh.set_status(sessionid, "Planning best paths to take")
+    route_to_be_followed = retry_until_success(get_route_to_be_followed, chat_history, intraday_planning,
+                                               free_attractions_added)
+    fh.set_status(sessionid, "Adding restaurants")
     restaurants_added = retry_until_success(add_restaurants_on_route, chat_history, route_to_be_followed)
     if restaurants_added[0] == '`':
         restaurants_added = restaurants_added[7:]
         restaurants_added = restaurants_added[:-4]
     output_json = convert_string_to_json(restaurants_added)
     num_days = len(output_json['itinerary_with_restaurants'])
-    temp_json = retry_until_success(get_itinerary_json, restaurants_added, attractions, chat_history,shortlisted_attractions, num_days)
+    fh.set_status(sessionid, "Almost there")
+    temp_json = retry_until_success(get_itinerary_json, restaurants_added, attractions, chat_history,
+                                    shortlisted_attractions, num_days)
     output_json = {}
     for i in temp_json:
         curr_val = 0
@@ -353,6 +432,5 @@ def get_itinerary_after_chat(chat_history):
         else:
             curr_val = i
         output_json = output_json | curr_val
-    with open("itinerary.json", "w") as f:
-        json.dump(output_json, f)
+    fh.set_status(sessionid, "Done")
     return output_json
