@@ -1,5 +1,5 @@
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import credentials, firestore, auth
 import time
 
 
@@ -15,6 +15,8 @@ sessions_ref = db.collection("sessions")
 
 
 def create_user(name, email, userid):
+    if userid in users_ref.get():
+        return
     users_ref.document(userid).set({'name': name, 'email': email, 'sessions': []})
 
 
@@ -24,6 +26,7 @@ def create_session(userid):
     a.append(ssid)
     users_ref.document(userid).update({'sessions': a})
     sessions_ref.document(ssid).set({'owner': userid})
+    return ssid
 
 
 def add_message_to_first_chat(role, sessionid, message):
@@ -96,3 +99,58 @@ def add_summary(sessionid, summary):
 
 def get_summary(sessionid):
     return sessions_ref.document(sessionid).get().to_dict()['summary']
+
+
+def verify_id_token(idToken):
+    print(auth.verify_id_token(idToken))
+    print(auth.verify_id_token(idToken))
+    print(auth.verify_id_token(idToken))
+    return auth.create_session_cookie(idToken, 60 * 60 * 24 * 5)
+
+
+def verify_session_cookie(cookie):
+    try:
+        print(auth.verify_session_cookie(cookie))
+        return True
+    except:
+        return False
+
+
+def get_uid(idToken):
+    return auth.verify_session_cookie(idToken)['uid']
+
+
+def get_email(idToken):
+    return auth.verify_session_cookie(idToken)['email']
+
+
+def get_name_by_session_cookie(idToken):
+    return auth.verify_session_cookie(idToken)['name']
+
+
+def get_groups(userid):
+    return users_ref.document(userid).get().to_dict()['sessions']
+
+
+def get_group_name(groupId):
+    return "temp name for now"
+
+
+def get_group_member_count(groupId):
+    return 1
+
+
+def group_leave(groupId, userid):
+    arr = users_ref.document(userid).get().to_dict()['sessions']
+    arr.remove(groupId)
+    users_ref.document(userid).update({'sessions': arr})
+
+
+def group_join(groupId, userid):
+    a = users_ref.document(userid).get().to_dict()['sessions']
+    a.append(groupId)
+    users_ref.document(userid).update({'sessions': a})
+
+
+def check_group_existance(groupId):
+    return sessions_ref.document(groupId).get().exists
