@@ -15,8 +15,9 @@ sessions_ref = db.collection("sessions")
 
 
 def create_user(name, email, userid):
-    if userid in users_ref.get():
-        return
+    for doc in users_ref.get():
+        if userid==doc.id:
+            return
     users_ref.document(userid).set({'name': name, 'email': email, 'sessions': []})
 
 
