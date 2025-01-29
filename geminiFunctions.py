@@ -50,7 +50,6 @@ def send_message(prompt, history, chat, system_instructions):
     # history.append({"role": "user", "parts": [{"text" : prompt}]})
     try:
         response, chat = getGeminiResponse(system_instructions, prompt,history, chat)
-        print("Gemini Response:", response.strip())
     except Exception as e:
         print(f"Error calling Gemini API: {e}")
         return history, chat  # Return original history and chat in case of error

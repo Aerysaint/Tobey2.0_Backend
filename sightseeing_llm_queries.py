@@ -386,36 +386,51 @@ def get_itinerary_after_chat(chat_history, sessionid):
     attractions = retry_until_success(get_user_json, chat_history)
     thread = threading.Thread(target=services.addAllAttractions, args=(attractions, sessionid))
     thread.start()
+    print("step 1 done")
     summarised_attractions = retry_until_success(summarise_attractions, attractions, chat_history)
+    print("step 2 done")
     fh.set_status(sessionid, "Removing repetitions")
     redundancy_removed_attractions = retry_until_success(remove_redundant_attractions, summarised_attractions,
                                                          chat_history)
+    print("step 3 done")
     fh.set_status(sessionid, "Shortlisting attractions for you")
     shortlisted_attractions = retry_until_success(shortlist_attractions, redundancy_removed_attractions, chat_history)
+    print("step 4 done")
     fh.set_status(sessionid, "Analysing time required for each attraction")
+    print("step 5 done")
     duration_analysis = retry_until_success(get_duration_analysis_of_attractions, shortlisted_attractions, chat_history)
+    print("step 6 done")
     fh.set_status(sessionid, "Clustering attractions")
     clustered_attractions = retry_until_success(cluster_groups_by_geographical_data, shortlisted_attractions,
                                                 chat_history)
+    print("step 7 done")
     fh.set_status(sessionid, "Finding best times to visit")
     time_based_attractions = retry_until_success(get_timings_for_attractions, shortlisted_attractions, chat_history)
+    print("step 8 done")
     fh.set_status(sessionid, "Analysing budget")
     budget_reasoned_attractions = retry_until_success(get_budget_reasoning_for_attractions, shortlisted_attractions,
                                                       chat_history)
+    print("step 9 done")
     fh.set_status(sessionid, "Getting itinerary's first draft")
     day_wise_itinerary = retry_until_success(get_day_wise_itinerary, chat_history, clustered_attractions,
                                              time_based_attractions, budget_reasoned_attractions, attractions,
                                              shortlisted_attractions, duration_analysis)
+    print("step 10 done")
     fh.set_status(sessionid, "Refining itinerary")
     free_attractions_added = retry_until_success(add_free_attractions_on_route, chat_history, day_wise_itinerary)
+    print("step 11 done")
     fh.set_status(sessionid, "Figuring out what to do when")
+    print("step 12 done")
     intraday_planning = retry_until_success(get_intraday_planning, attractions, chat_history, day_wise_itinerary,
                                             duration_analysis, clustered_attractions, time_based_attractions)
+    print("step 13 done")
     fh.set_status(sessionid, "Planning best paths to take")
     route_to_be_followed = retry_until_success(get_route_to_be_followed, chat_history, intraday_planning,
                                                free_attractions_added)
+    print("step 14 done")
     fh.set_status(sessionid, "Adding restaurants")
     restaurants_added = retry_until_success(add_restaurants_on_route, chat_history, route_to_be_followed)
+    print("step 15 done")
     if restaurants_added[0] == '`':
         restaurants_added = restaurants_added[7:]
         restaurants_added = restaurants_added[:-4]
@@ -433,4 +448,5 @@ def get_itinerary_after_chat(chat_history, sessionid):
             curr_val = i
         output_json = output_json | curr_val
     fh.set_status(sessionid, "Done")
+    print(output_json)
     return output_json

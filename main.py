@@ -59,7 +59,7 @@ async def updateNextInitial(sessionid: str):
         realhist = realhist[0:-2]
         thread = threading.Thread(target=services.additinerary, args=(realhist, sessionid))
         thread.start()
-        return {'status': 'chat finished'}
+        return "ok"
     fh.add_message_to_first_chat("model", sessionid, response)
     return "ok"
 

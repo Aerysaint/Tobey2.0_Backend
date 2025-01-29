@@ -1720,6 +1720,7 @@ Your task is to synthesize these outputs and to generate a structured JSON outpu
     *   **2.3 Extract Required Data for Each Attraction:** For *each* attraction, extract the following information:
         *  You must extract the `SightseeingName`, and also get the  `SightseeingCode` from the original TBO data.
          *  You must extract the `OfferedPriceRoundedOff` (or `PublishedPriceRoundedOff` if the offered price is not available), the currency, and must set the price to 0, and currency to null, if the activity is free and not bookable.
+         * You must also write the city_Name for the activity, which is the name of the city where this activity takes place.
         *   Extract the time range from the intraday itinerary with restaurants output.
         *  You must also extract the `FromDate`, and `ToDate` by using the start and end time from the time range, and the date from the TBO data.
          *   You must get the `tbo_rating` from the original TBO response object. If the rating is not available, then you must use `null` as the value.
@@ -1740,9 +1741,9 @@ Your task is to synthesize these outputs and to generate a structured JSON outpu
                          * `time_range`: A string that specifies the time range for the activity.
                          *   `FromDate`: A string representing the start time for the activity (which is the time at which the activity will happen) in the format `YYYY-MM-DDTHH:MM:SS`.
                          * `ToDate`: A string representing the end time for the activity (which is when that activity will end). It should be in the format `YYYY-MM-DDTHH:MM:SS`.
-                          * `tbo_description`: A string and the value must be derived from tbo's api data, and should be added as a summary of the activity as given there.
-                           *  `llm_description`: A string and the value must be a justification as to why we have recommended this activity to the user, at this time slot, how it matches the user's preferences (which you will infer by the chat history); if there was any reason for this timing, etc.
-                              * `llm_description_one_liner`: A string that must be a one line summary for quick reading of the llm_description field.
+                          * `tbo_description`: A string and the value must be derived from tbo's api data, and should be added as a summary of the activity as given there note that no emojis should be added.
+                           *  `llm_description`: A string and the value must be a justification as to why we have recommended this activity to the user, at this time slot, how it matches the user's preferences (which you will infer by the chat history); if there was any reason for this timing, etc. Note that no emojis should be added.
+                              * `llm_description_one_liner`: A string that must be a one line summary for quick reading of the llm_description field. Note that no emojis should be added.
                           *    `ai_rating`: A number between 0 and 5 representing how much the activity matches the user’s preferences.
                           * 'tbo_rating' : a number between 0 and 5 representing the rating of the activity as per TBO's api data.
                           *  `ends_next_day` : A boolean that shows if an activity flows over to the next day or not.
@@ -1751,10 +1752,12 @@ Your task is to synthesize these outputs and to generate a structured JSON outpu
                            *  `conditions`: A string that lists all the conditions for the activity, or null if not available.
                            *  `restaurant_reason` : A string that provides the reasoning behind the restaurant recommendation, if it is a restaurant, and an empty string if not.
                            * 'travel_mode' : a string which may take the value 'car', 'walk', 'train' or 'flight' or 'null' based on the mode of travel required.
+                           * 'city_name' : a string representing the city name of the activity. 
     *   **4.2 Valid JSON:** Ensure your output is a valid JSON object.
     *   **4.3 No Preamble:** Your output must only be the JSON object, and should not contain any surrounding text or any additional information.
 
 **JSON Output Structure (Example):** (say, if asked for day 1)
+YOU WILL TAKE SPECIAL CARE WHEN POPULATING THE DATES AND TIMES IN THE JSON OBJECT. YOU WILL ENSURE THAT THE DATES AND TIMES ARE IN THE CORRECT FORMAT AND ARE ACCURATE. For example, if the activity is from 9:00 AM to 12:00 PM on 29th January 2025, then the FromDate should be "2025-01-29T09:00:00" and the ToDate should be "2025-01-29T12:00:00" and this date will be inferred from the day key in the provided itinerary, i.e. for example if the user talked about a 5 day trip from date X and the said activity is on day Y then the ToDate and FromDate should reflect the date X + Y. Ensure this is done, it is crucial.
 
 ```json
 {
@@ -1766,6 +1769,7 @@ Your task is to synthesize these outputs and to generate a structured JSON outpu
         "time_range": "8:30 AM - 9:00 AM",
         "price": 0,
           "currency": null,
+          "city_name": "Delhi",
          "FromDate": "2025-01-29T08:30:00",
           "ToDate": "2025-01-29T09:00:00",
          "tbo_description": "",
@@ -1786,6 +1790,7 @@ Your task is to synthesize these outputs and to generate a structured JSON outpu
         "SightseeingCode": "E-E10-IN-DEFOOD",
         "time_range": "9:00 AM - 1:00 PM",
         "price": 2495.24,
+        "city_name" : "Delhi",
           "currency": "INR",
          "FromDate": "2025-01-29T09:00:00",
           "ToDate": "2025-01-29T13:00:00",
@@ -1808,6 +1813,7 @@ Your task is to synthesize these outputs and to generate a structured JSON outpu
         "time_range": "1:00 PM - 1:10 PM",
         "price": 0,
           "currency": null,
+          "city_name" : "Delhi",
          "FromDate": "2025-01-29T13:00:00",
           "ToDate": "2025-01-29T13:10:00",
          "tbo_description": "",
@@ -1829,6 +1835,7 @@ Your task is to synthesize these outputs and to generate a structured JSON outpu
          "time_range": "1:10 PM - 2:00 PM",
           "price": 0,
            "currency": null,
+           "city_name" : "Delhi",
            "tbo_description": "",
             "llm_description": " Karim's is located near the Jama Masjid (which is near the Red Fort which is on the way from Delhi Food Walk to Gandhi Museum), and it is a highly recommended restaurant for local cuisine with non vegetarian options, as per Google search. The price is moderate, and it is suitable for lunch.",
              "llm_description_one_liner": " Highly recommended restaurant for local cuisine, on the way to the next attraction with moderate price.",
@@ -1846,6 +1853,7 @@ Your task is to synthesize these outputs and to generate a structured JSON outpu
         "time_range": "2:00 PM - 2:30 PM",
         "price": 0,
           "currency": null,
+          "city_name" : "Delhi", 
          "FromDate": "2025-01-29T14:00:00",
           "ToDate": "2025-01-29T14:30:00",
          "tbo_description": "",
@@ -1867,6 +1875,7 @@ Your task is to synthesize these outputs and to generate a structured JSON outpu
         "time_range": "2:30 PM - 3:30 PM",
         "price": 4546.9,
           "currency":"INR",
+          "city_name" : "Delhi",
           "tbo_description": " Explore the life of Mahatma Gandhi with a guided tour of his former residence and other important landmarks.",
          "llm_description": " The user has a preference for historical sites, and this activity is a highly recommended tour of Gandhi's Delhi, which is suitable for the afternoon hours. The price is moderate, and it fits well with the user's preferences. The user also mentioned that he had kids and this will be a good learning experience for them as well.",
            "llm_description_one_liner": " Guided tour of Gandhi's Delhi.",
@@ -1886,6 +1895,7 @@ Your task is to synthesize these outputs and to generate a structured JSON outpu
         "time_range": "3:30 PM - 4:15 PM",
         "price": 0,
           "currency": null,
+          "city_name" : "Delhi",
          "FromDate": "2025-01-29T015:30:00",
           "ToDate": "2025-01-29T16:15:00",
          "tbo_description": "",

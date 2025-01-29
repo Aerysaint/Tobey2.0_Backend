@@ -13,10 +13,7 @@ def convertLlmActivityToActivity(llm_activity):
     ans['tbo_description'] = llm_activity["tbo_description"]
     ans['llm_description'] = llm_activity["llm_description"]
     ans['rating'] = llm_activity["ai_rating"]
-
-
-
-    ans["CityName"] = llm_activity["CityName"]
+    ans["CityName"] = llm_activity["city_name"]
 
 
 def convert_llm_itinerary(llm_itinerary):
@@ -40,7 +37,7 @@ def convertTboToActivity(tbo_activity):
 def convertTboToActivities(tbo_activities):
     ans = []
     for curr in tbo_activities:
-        for activity in curr['SightseeingSearchResults']:
+        for activity in curr['Response']['SightseeingSearchResults']:
             ans.append(convertTboToActivity(activity))
     return ans
 
@@ -52,6 +49,8 @@ def additinerary(hist, sessionid):
         fh.add_activity_to_itinerary(sessionid,activity)
 
 def addAllAttractions(attractions, sessionid):
+    #TODO:Remove this only for test:
+    return
     ans = convertTboToActivities(attractions)
     fh.add_activities(sessionid, ans)
     print("added attractions")

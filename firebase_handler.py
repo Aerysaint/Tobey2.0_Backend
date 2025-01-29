@@ -66,6 +66,7 @@ def add_message_to_ai_chat(role, sessionid, message):
 
 def add_activities(sessionid, activities):
     for activity in activities:
+        print("adding smth")
         sessions_ref.document(sessionid).collection("activities").document(current_milli_time()).set(activity)
 
 
@@ -95,7 +96,7 @@ def get_all_activities(sessionid):
     arr = []
     docs = sessions_ref.document(sessionid).collection("activities").stream()
     for doc in docs:
-        arr.append([doc.id, doc.to_dict()])
+        arr.append(doc.to_dict())
     return arr
 
 
@@ -108,8 +109,6 @@ def get_summary(sessionid):
 
 
 def verify_id_token(idToken):
-    print(auth.verify_id_token(idToken))
-    print(auth.verify_id_token(idToken))
     print(auth.verify_id_token(idToken))
     return auth.create_session_cookie(idToken, 60 * 60 * 24 * 5)
 
@@ -163,7 +162,6 @@ def group_join(groupId, userid):
     # Added to user now adding to group
     a = sessions_ref.document(groupId).get().to_dict()['users']
     a.append(userid)
-    print("should be added now")
     sessions_ref.document(groupId).update({'users': a})
 
 
