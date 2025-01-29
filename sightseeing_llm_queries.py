@@ -140,22 +140,28 @@ def add_restaurants_on_route(chat_history, current_itinerary):
     return history[-1]["parts"][0]["text"]
 
 
-def get_itinerary_json(itinerary, attractions, chat_history, shortlisted_attractions, num_days):
+def get_itinerary_json(itinerary, attractions, chat_history, shortlisted_attractions,  num_days):
     final_json = []
+    output_json = {}
     for i in range(num_days):
-        system_instruction = system_instruction_for_getting_itinerary_json
-        history, chat, _ = start_chat(system_instruction)
-        history, chat = send_message(
-            f"Based on the given chat history, itinerary, attractions with their justifications for the user and tbo's api data for searching attractions in the given city, create the json for day {i + 1}. \n\n tbo's api result : {attractions} \n\n itinerary : {itinerary}, \n\n chat history : {chat_history} \n\n justifications : {shortlisted_attractions}",
-            history, chat, system_instruction)
-        output_json = history[-1]["parts"][0]["text"]
-        str_json = str(output_json)
-        if (str_json[0] == '`'):
-            str_json = str_json[7:]
-            str_json = str_json[:-4]
-        output_json = convert_string_to_json(str_json)
+        while True:
+            try:
+                system_instruction = system_instruction_for_getting_itinerary_json
+                history, chat, _ = start_chat(system_instruction)
+                history, chat = send_message(f"Based on the given chat history, itinerary, attractions with their justifications for the user and tbo's api data for searching attractions in the given city, create the json for day {i+1}. \n\n tbo's api result : {attractions} \n\n itinerary : {itinerary}, \n\n chat history : {chat_history} \n\n justifications : {shortlisted_attractions}", history, chat, system_instruction)
+                output_json = history[-1]["parts"][0]["text"]
+                str_json = str(output_json)
+                if(str_json[0] == '`'):
+                    str_json = str_json[7:]
+                    str_json = str_json[:-4]
+                output_json = convert_string_to_json(str_json)
+                break
+                # time.sleep(5)
+            except Exception as e:
+                print("Retrying json for day ", i+1)
+                print(e)
+                continue
         final_json.append(output_json)
-        time.sleep(5)
     return final_json
 
 
@@ -450,3 +456,17 @@ def get_itinerary_after_chat(chat_history, sessionid):
     fh.set_status(sessionid, "Done")
     print(output_json)
     return output_json
+
+
+
+
+
+
+
+
+
+
+
+
+
+
