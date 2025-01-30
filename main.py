@@ -90,15 +90,24 @@ async def addGroupMessage(sessionid: str, message: str, userid: str):
 
 
 @app.get("/addActivityToItinerary")
-async def addActivityToItinerary(sessionid: str, activityid: str, tim):
+async def addActivityToItinerary(groupid: str, activityid: str, fromdate: str, todate: str):
     # TODO: custom events
-    activity = fh.get_activity_by_id(sessionid, activityid)
-    fh.add_activity_to_itinerary(sessionid, activity, tim)
+    activity = fh.get_activity_by_id(groupid, activityid)
+    activity = services.addTimeToActivity(activity, fromdate, todate)
+    return fh.add_activity_to_itinerary(groupid, activity)
+
+@app.get("/removeActivityFromItinerary")
+async def addActivityToItinerary(groupid: str, activityid: str):
+    fh.remove_activity_from_itinerary(groupid, activityid)
+
+@app.get("/updateActivityInItinerary")
+async def updateActivityInItinerary(groupid: str, activityid: str, fromdate: str, todate: str):
+    fh.update_activity(groupid, activityid, fromdate, todate)
 
 
 @app.get("/getAllActivities")
-async def getAllActivities(sessionid: str):
-    return fh.get_all_activities(sessionid)
+async def getAllActivities(groupid: str):
+    return fh.get_all_activities(groupid)
 
 
 @app.get("/createUser")

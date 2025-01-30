@@ -14,6 +14,7 @@ def convertLlmActivityToActivity(llm_activity):
     ans['llm_description'] = llm_activity["llm_description"]
     ans['rating'] = llm_activity["ai_rating"]
     ans["CityName"] = llm_activity["city_name"]
+    return ans
 
 
 def convert_llm_itinerary(llm_itinerary):
@@ -46,11 +47,16 @@ def additinerary(hist, sessionid):
     final = llm.get_itinerary_after_chat(hist, sessionid)
     final = convert_llm_itinerary(final)
     for activity in final:
-        fh.add_activity_to_itinerary(sessionid,activity)
+        fh.add_activity_to_itinerary(sessionid, activity)
+
 
 def addAllAttractions(attractions, sessionid):
-    #TODO:Remove this only for test:
-    return
     ans = convertTboToActivities(attractions)
     fh.add_activities(sessionid, ans)
     print("added attractions")
+
+
+def addTimeToActivity(activity, fromdate, todate):
+    activity['FromDate'] = fromdate
+    activity['ToDate'] = todate
+    return activity

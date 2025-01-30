@@ -2,6 +2,8 @@ import firebase_admin
 from firebase_admin import credentials, firestore, auth
 import time
 
+import services
+
 
 def current_milli_time():
     return str(round(time.time() * 1000))
@@ -71,7 +73,15 @@ def add_activities(sessionid, activities):
 
 
 def add_activity_to_itinerary(sessionid, activity):
-    sessions_ref.document(sessionid).collection("itinerary").document(current_milli_time()).set(activity)
+    id=current_milli_time()
+    sessions_ref.document(sessionid).collection("itinerary").document(id).set(activity)
+    return id
+
+def remove_activity_from_itinerary(sessionid, activity):
+    sessions_ref.document(sessionid).collection("itinerary").document(activity).delete()
+
+def update_activity(sessionid, activityid, fromdate, todate):
+    sessions_ref.document(sessionid).collection("itinerary").document(activityid).update({'FromDate': fromdate, 'ToDate': todate})
 
 def set_status(sessionid, status):
     sessions_ref.document(sessionid).update({'status': status})
@@ -96,7 +106,7 @@ def get_all_activities(sessionid):
     arr = []
     docs = sessions_ref.document(sessionid).collection("activities").stream()
     for doc in docs:
-        arr.append(doc.to_dict())
+        arr.append([doc.id,doc.to_dict()])
     return arr
 
 
