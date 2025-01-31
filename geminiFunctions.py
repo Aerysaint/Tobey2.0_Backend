@@ -24,7 +24,14 @@ def getGeminiResponse(system_instructions, prompt, history, chat):
     if chat is None:
         # print("creating new chat with \n", history)
         chat = client.chats.create(model="gemini-2.0-flash-exp", history=history, config=generation_config)
-    response = chat.send_message(prompt)
+    while True:
+        try:
+            response = chat.send_message(prompt)
+            break
+        except Exception as e:
+            print(f"Error calling Gemini API: {e}")
+            print("Retrying...")
+            continue
     return response.text, chat
 
 def start_chat(system_instructions):
