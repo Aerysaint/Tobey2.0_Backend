@@ -72,12 +72,15 @@ def next_message_for_initial_chat(history):
     response = chat.send_message(message)
     return response.text
 
-def next_message_for_ai_chat(history):
+def next_message_for_ai_chat(history, curr_itinerary, attractions):
     message = history[-1]["parts"][0]["text"]
-    system_instruction = system_instructions_for_initial_chat
+    system_instruction = system_instructions_for_ai_chat
+    system_instruction += "here is the current complete itinerary\n\n" + curr_itinerary + "\n\n"
+    system_instruction += "here is the complete list of attractions\n\n" + attractions + "\n\n"
     chat = client.chats.create(model="gemini-2.0-flash-exp", history=history, config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
     response = chat.send_message(message)
     return response.text
+
 # Example usage:
 # system_instructions = prompts.base_system_instruction + prompts.system_instruction_for_sorting_attractions_based_on_time
 # history, chat, system_instructions = start_chat(system_instructions)  # Start a new chat
