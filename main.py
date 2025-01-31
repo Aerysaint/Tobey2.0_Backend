@@ -73,6 +73,8 @@ async def updateNextInitial(sessionid: str):
         history.append({"role": "model", "parts": [{"text": response}]})
         history.append({"role": "user", "parts": [{"text": "Please give me a summary of my trip again as a json."}]})
         response = gemini.next_message_for_initial_chat(history)
+        name = gemini.get_session_title(realhist)
+        fh.add_group_name(name, sessionid)
         fh.add_summary(sessionid, response)
         realhist = realhist[0:-2]
         thread = threading.Thread(target=services.additinerary, args=(realhist, sessionid))

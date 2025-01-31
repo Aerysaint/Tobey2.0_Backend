@@ -240,7 +240,11 @@ def get_groups(userid):
 
 
 def get_group_name(groupId):
-    return "temp name for now"
+    try:
+        a = sessions_ref.document(groupId).get().to_dict()['name']
+        return a
+    except:
+        return "Untitled group"
 
 
 def get_group_member_count(groupId):
@@ -283,3 +287,7 @@ def get_all_activities_with_id(groupid):
         curr['id'] = doc.id
         arr.append(curr)
     return arr
+
+
+def add_group_name(name, sessionid):
+    sessions_ref.document(sessionid).update({'name': name})
