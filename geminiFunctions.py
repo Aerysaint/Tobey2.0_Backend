@@ -108,15 +108,27 @@ def get_search_result(query, curr_itinerary, attractions):
     system_instruction += "Here is the current complete itinerary\n\n" + str(curr_itinerary) + "\n\n"
     system_instruction += "Here is the complete list of attractions\n\n" + str(attractions) + "\n\n"
     chat = client.chats.create(model="gemini-2.0-flash-exp", history=[], config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
+    result = []
     while True:
         try:
             response = chat.send_message(query)
+            resp = response.text
+            if resp[0] == "`":
+                resp = resp[7:]
+                resp = resp[:-4]
+            result = convert_string_to_json(resp)
+            lst = []
+            for i in result:
+                lst.append(i)
+            result = lst
             break
         except Exception as e:
             print("Something went wrong in the search")
             print(e)
             continue
-    return response.text
+    return result
+
+
 # Example usage:
 # system_instructions = prompts.base_system_instruction + prompts.system_instruction_for_sorting_attractions_based_on_time
 # history, chat, system_instructions = start_chat(system_instructions)  # Start a new chat

@@ -2386,7 +2386,7 @@ CityName: (String) The city of the attraction. Take this data from TBO's respons
 
 JSON Output Structure (Example):
 
-[
+{
     {
         "CityName": "Delhi",
         "Currency": "INR",
@@ -2434,7 +2434,7 @@ JSON Output Structure (Example):
         "Name": "Temples of Delhi - Half-Day Tour",
         "Price": 5594.94
        }
-]
+}
 
 Constraints:
 
