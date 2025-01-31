@@ -2379,7 +2379,7 @@ CityName: (String) The city of the attraction. Take this data from TBO's respons
 * ImageList: (List of strings) The image URLs from TBO data. Take this data from TBO's response object.
 * Name: (String) The name of the attraction. Take this data from TBO's response object.
 * Price: (Number) The offered price of the activity from TBO's response object. If it is missing, then you must use the published price, and if both are missing then you must use 0. 
-
+* id : (String) The id of the attraction from tbo's response object. Note that this is different from the sightseeing code. The id field is named "id" in tbo's response object.
 4.3 Valid JSON: The output must be a valid JSON object.
 
 4.4 No Extraneous Information: The output must only be the JSON object and should not have any surrounding text, or any other data.
@@ -2392,7 +2392,8 @@ JSON Output Structure (Example):
         "Currency": "INR",
         "ImageList": ["https://media.activitiesbank.com/15744/ENG/B/15744_1.jpg", "https://media.activitiesbank.com/15744/ENG/B/15744_2.jpg"],
         "Name": "Lonely Planet Experiences - Delhi Food Walk",
-        "Price": 2495.24
+        "Price": 2495.24,
+        "id" : 0789
     },
     {
         "CityName": "Delhi",
@@ -2406,7 +2407,8 @@ JSON Output Structure (Example):
             "https://media.activitiesbank.com/15746/ENG/B/15746_6.jpg"
         ],
         "Name": "Half Day Gandhi's Delhi",
-        "Price": 4546.9
+        "Price": 4546.9,
+        "id" : "3456"
     },
     {
         "CityName": "Delhi",
@@ -2418,7 +2420,8 @@ JSON Output Structure (Example):
             "https://media.activitiesbank.com/32729/ENG/B/32729_1.jpg"
         ],
         "Name": "Cycle Tour of Old or New Delhi",
-       "Price": 5323.19
+       "Price": 5323.19,
+       "id" : "2345"
     },
    {
       "CityName": "Delhi",
@@ -2432,7 +2435,8 @@ JSON Output Structure (Example):
         "https://media.activitiesbank.com/29674/ENG/B/29674_6.jpg"
           ],
         "Name": "Temples of Delhi - Half-Day Tour",
-        "Price": 5594.94
+        "Price": 5594.94,
+        "id" : "1234"
        }
 }
 
@@ -2457,3 +2461,6 @@ Robustness: Your system should be able to handle incomplete data, and to provide
 Efficiency: The system must be efficient and must be able to filter and return all the matching attractions as fast as possible.
 
 Structure: The JSON output must follow the specified structure."""
+
+
+system_instruction_for_
