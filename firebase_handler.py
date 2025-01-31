@@ -39,6 +39,12 @@ def add_message_to_first_chat(role, sessionid, message):
     sessions_ref.document(sessionid).collection("first chat").document(current_milli_time()).set(
         {'role': role, 'parts': [{'text': message}]})
 
+def get_group_chat(sessionid):
+    docs = sessions_ref.document(sessionid).collection("group chat").stream()
+    arr = []
+    for doc in docs:
+        arr.append(doc.to_dict())
+    return arr
 
 def get_first_chat(sessionid):
     docs = sessions_ref.document(sessionid).collection("first chat").stream()
@@ -73,18 +79,23 @@ def add_activities(sessionid, activities):
 
 
 def add_activity_to_itinerary(sessionid, activity):
-    id=current_milli_time()
+    id = current_milli_time()
     sessions_ref.document(sessionid).collection("itinerary").document(id).set(activity)
     return id
+
 
 def remove_activity_from_itinerary(sessionid, activity):
     sessions_ref.document(sessionid).collection("itinerary").document(activity).delete()
 
+
 def update_activity(sessionid, activityid, fromdate, todate):
-    sessions_ref.document(sessionid).collection("itinerary").document(activityid).update({'FromDate': fromdate, 'ToDate': todate})
+    sessions_ref.document(sessionid).collection("itinerary").document(activityid).update(
+        {'FromDate': fromdate, 'ToDate': todate})
+
 
 def set_status(sessionid, status):
     sessions_ref.document(sessionid).update({'status': status})
+
 
 def get_full_itinerary(sessionid):
     arr = []
@@ -106,7 +117,7 @@ def get_all_activities(sessionid):
     arr = []
     docs = sessions_ref.document(sessionid).collection("activities").stream()
     for doc in docs:
-        arr.append([doc.id,doc.to_dict()])
+        arr.append([doc.id, doc.to_dict()])
     return arr
 
 
@@ -177,3 +188,7 @@ def group_join(groupId, userid):
 
 def check_group_existance(groupId):
     return sessions_ref.document(groupId).get().exists
+
+
+def update_budget(groupid, budget):
+    sessions_ref.document(groupid).update({'budget': budget})

@@ -75,10 +75,17 @@ def next_message_for_initial_chat(history):
 def next_message_for_ai_chat(history, curr_itinerary, attractions):
     message = history[-1]["parts"][0]["text"]
     system_instruction = system_instructions_for_ai_chat
-    system_instruction += "here is the current complete itinerary\n\n" + curr_itinerary + "\n\n"
-    system_instruction += "here is the complete list of attractions\n\n" + attractions + "\n\n"
+    system_instruction += "here is the current complete itinerary\n\n" + str(curr_itinerary) + "\n\n"
+    system_instruction += "here is the complete list of attractions\n\n" + str(attractions) + "\n\n"
     chat = client.chats.create(model="gemini-2.0-flash-exp", history=history, config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
-    response = chat.send_message(message)
+    while True:
+        try:
+            response = chat.send_message(message)
+            break
+        except Exception as e:
+            print("Something when wrong in the summoning")
+            print(e)
+            continue
     return response.text
 
 # Example usage:

@@ -1,6 +1,6 @@
 import sightseeing_llm_queries as llm
 import firebase_handler as fh
-
+import geminiFunctions as gemini
 
 def convertLlmActivityToActivity(llm_activity):
     ans = {}
@@ -60,3 +60,35 @@ def addTimeToActivity(activity, fromdate, todate):
     activity['FromDate'] = fromdate
     activity['ToDate'] = todate
     return activity
+
+
+def convertGroupChatToLLMParseable(groupchat):
+    llmchat = []
+    las = {}
+    for message in groupchat:
+        if message['user'] == 'Tobey':
+            llmchat.append(las)
+            las['role'] = 'model'
+            las['parts'] = [{'text': message['message']}]
+        else:
+            try:
+                if las['role'] == 'user':
+                    las['parts'] = [{'text': las['parts'][0]['text'] + "\n" + message['message']}]
+                    continue
+            except:
+                pass
+            las['role'] = 'user'
+            las['parts'] = [{'text': message['message']}]
+    llmchat.append(las)
+    while (llmchat[-1]['role'] == 'model'):
+        llmchat = llmchat[0:-2]
+    return llmchat
+
+def groupChatReturn(groupid):
+    print("Someone has summoned Tobey")
+    groupchat = fh.get_group_chat(groupid)
+    groupchat = convertGroupChatToLLMParseable(groupchat)
+    itinerary = fh.get_full_itinerary(groupid)
+    attractions = fh.get_all_activities(groupid)
+    message = gemini.next_message_for_ai_chat(groupchat, itinerary, attractions)
+    fh.add_message_to_group_chat('Tobey', groupid, message)

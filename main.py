@@ -83,9 +83,15 @@ async def addInitialMessage(sessionid: str, message: str):
 
 
 @app.get("/addGroupMessage")
-async def addGroupMessage(sessionid: str, message: str, userid: str):
+async def addGroupMessage(groupid: str, message: str, request: Request):
+    idToken = request.cookies.get("session")
+    userid = fh.get_uid(idToken)
     username = fh.get_name_by_userid(userid)
-    fh.add_message_to_group_chat(username, sessionid, message)
+    fh.add_message_to_group_chat(username, groupid, message)
+    if message.startswith("@Tobey"):
+        print(groupid)
+        thread = threading.Thread(target=services.groupChatReturn, args=(groupid,))
+        thread.start()
     return "ok"
 
 
@@ -207,3 +213,7 @@ async def signOut():
         max_age=0
     )
     return response
+
+@app.get("/updateBudget")
+async def updateBudget(groupid: str, budget: float, request: Request):
+    fh.update_budget(groupid, budget)
