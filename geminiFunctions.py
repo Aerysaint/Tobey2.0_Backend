@@ -102,6 +102,21 @@ def get_attraction_llm_description(attraction, curr_itinerary, chat_history):
             print(e)
             continue
     return response.text
+
+def get_search_result(query, curr_itinerary, attractions):
+    system_instruction = system_instruction_for_search
+    system_instruction += "Here is the current complete itinerary\n\n" + str(curr_itinerary) + "\n\n"
+    system_instruction += "Here is the complete list of attractions\n\n" + str(attractions) + "\n\n"
+    chat = client.chats.create(model="gemini-2.0-flash-exp", history=[], config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
+    while True:
+        try:
+            response = chat.send_message(query)
+            break
+        except Exception as e:
+            print("Something went wrong in the search")
+            print(e)
+            continue
+    return response.text
 # Example usage:
 # system_instructions = prompts.base_system_instruction + prompts.system_instruction_for_sorting_attractions_based_on_time
 # history, chat, system_instructions = start_chat(system_instructions)  # Start a new chat
