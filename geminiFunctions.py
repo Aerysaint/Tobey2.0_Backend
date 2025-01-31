@@ -69,7 +69,14 @@ def next_message_for_initial_chat(history):
     message = history[-1]["parts"][0]["text"]
     system_instruction = system_instructions_for_initial_chat
     chat = client.chats.create(model="gemini-2.0-flash-exp", history=history, config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
-    response = chat.send_message(message)
+    while True:
+        try:
+            response = chat.send_message(message)
+            break
+        except Exception as e:
+            print("Something when wrong in the summoning")
+            print(e)
+            continue
     return response.text
 
 def next_message_for_ai_chat(history, curr_itinerary, attractions):
@@ -95,7 +102,7 @@ def get_attraction_llm_description(attraction, curr_itinerary, chat_history):
     chat = client.chats.create(model="gemini-2.0-flash-exp", history=chat_history, config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
     while True:
         try:
-            response = chat.send_message(attraction)
+            response = chat.send_message(str(attraction))
             break
         except Exception as e:
             print("Something went wrong in the descriptioning")
@@ -103,9 +110,8 @@ def get_attraction_llm_description(attraction, curr_itinerary, chat_history):
             continue
     return response.text
 
-def get_search_result(query, curr_itinerary, attractions):
+def get_search_result(query, attractions):
     system_instruction = system_instruction_for_search
-    system_instruction += "Here is the current complete itinerary\n\n" + str(curr_itinerary) + "\n\n"
     system_instruction += "Here is the complete list of attractions\n\n" + str(attractions) + "\n\n"
     chat = client.chats.create(model="gemini-2.0-flash-exp", history=[], config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
     result = []
@@ -116,7 +122,7 @@ def get_search_result(query, curr_itinerary, attractions):
             if resp[0] == "`":
                 resp = resp[7:]
                 resp = resp[:-4]
-            result = resp
+            result = eval(resp)
             lst = []
             for i in result:
                 lst.append(i)

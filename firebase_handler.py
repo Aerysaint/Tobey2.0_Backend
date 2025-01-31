@@ -30,8 +30,7 @@ def create_group(userid):
     a.append(ssid)
     users_ref.document(userid).update({'sessions': a})
     a = [userid]
-    sessions_ref.document(ssid).update({'users': a, 'owner': userid})
-    set_status(ssid, "Chatting")
+    sessions_ref.document(ssid).set({'users': a, 'owner': userid, 'status': 'Chatting'})
     print("returning: ", ssid)
     return ssid
 

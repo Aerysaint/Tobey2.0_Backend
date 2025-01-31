@@ -130,7 +130,9 @@ async def addActivityToItinerary(groupid: str, activityid: str):
 
 @app.get("/updateActivityInItinerary")
 async def updateActivityInItinerary(groupid: str, activityid: str, fromdate: str, todate: str):
-    fh.update_activity(groupid, activityid, fromdate, todate)
+    a = fh.update_activity(groupid, activityid, fromdate, todate)
+    if 'error' in a:
+        return JSONResponse({'error': a}, status_code=400)
 
 
 @app.get("/getAllActivities")
@@ -155,7 +157,8 @@ async def createGroup(request: Request):
     userid = fh.get_uid(idToken)
     try:
         return {"groupId": fh.create_group(userid)}
-    except:
+    except Exception as e:
+        print("oh boy",e)
         return {"groupId": None}
 
 
@@ -245,5 +248,6 @@ async def updateBudget(groupid: str, budget: float, request: Request):
 @app.get("/llmSearch")
 async def llmSearch(groupid: str, query: str):
     activities = fh.get_all_activities_with_id(groupid)
-    itinerary = fh.get_full_itinerary(groupid)
-    return gemini.get_search_result(query, itinerary, activities)
+    a=gemini.get_search_result(query, activities)
+    print(a)
+    return a

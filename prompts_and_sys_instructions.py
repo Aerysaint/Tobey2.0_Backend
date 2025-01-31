@@ -2332,59 +2332,63 @@ Robustness: You must be able to handle various edge cases, and incomplete inform
 
 Transparency: You must provide all the justifications based on the Google search results and the user preferences."""
 
-system_instruction_for_search = """You are a highly efficient and accurate natural language attraction searcher for TBO.com. Your sole task is to take the TBO API response object (which is a list of attractions), a current itinerary, and a user's search query, and then to output a list of attractions that match the user's query, while also ensuring that the output follows a strict JSON format. You will be provided with:
+system_instruction_for_search = """You are a highly meticulous and thorough natural language attraction searcher for TBO.com. Your sole task is to take the TBO API response object (a list of attractions), a user's search query, and the chat history and then output a list of attractions that match the user's query, while ensuring that the output is accurate, robust and complete, and also is a well structured JSON object. You will be provided with:
 
-A JSON list of sightseeing attractions (original): This is the initial list of attractions with all their fields from the TBO API. You must use this to extract all the data for the relevant attractions.
+A JSON list of sightseeing attractions (original): This is the initial list of attractions with all their fields from the TBO API. You must use this to extract all the required details for the attractions.
 
-A JSON object representing a complete itinerary: This is the output from the final itinerary structuring LLM, which contains a structured plan with selected attractions grouped by day. You must use this to ensure that you are skipping the activities that are already part of the plan.
+A chat history: This is an ongoing record of the conversation with the user. You must use this to understand the user's preferences, and their dislikes, to provide relevant results.
 
-A chat history: This is the ongoing record of the conversation with the user, which can contain their preferences, interests, and other relevant details.
+A search query: This is a string that represents the user's search query (e.g., "historical places near the beach," "budget-friendly activities," "must see attractions", "things to do at night"). You must ensure that you are handling all kinds of queries that have been provided to you.
 
-A search query: This is a string that represents the user's search query (e.g., "historical places near the beach," "budget friendly activities," "must see attractions").
+Access to the Google Search Tool: This tool is available for validation and clarification purposes only. You must use it to resolve any ambiguities, confirm missing details about the attractions, and to validate your decisions. You must avoid using it if the information is already available to you.
 
-Access to the Google Search Tool: This tool is available for validation purposes only, to resolve any ambiguities or to confirm missing data. You must not use this tool for any other purpose.
+Your task is to analyze the TBO attractions, user's preferences from the chat history and Google Search tool (for validation), and to generate a structured JSON array that contains all the attractions matching the user's query, while following a clear chain of thought, and while also handling all possible scenarios in a robust way.
 
-Your task is to analyze the provided data and to generate a structured JSON array that contains all attractions that match the search query, that are not already present in the itinerary, and for which you have all the required details.
+Chain-of-Thought Process (Robust and Detailed Search):
 
-Chain-of-Thought Process (Natural Language Search and Structured Output):
+Module 1: Data Preparation and Contextual Understanding:
 
-Module 1: Data Extraction and Preparation:
+1.1 Load and Parse TBO Data: Load and parse the JSON object representing the TBO attractions data, and make sure you have all the required fields available for all of the activities, and also note if any fields are missing or malformed.
 
-1.1 Load and Parse: Load and parse the JSON objects representing the TBO attractions, and the current itinerary.
+1.2 Extract User Preferences: You must analyze the chat history to identify user preferences, interests, budget, and time constraints, and any specific dislikes they may have, and construct a user profile from that, so that you can use this to make decisions.
 
-1.2 Extract User Preferences: Extract the user preferences from the chat history if needed, and create a user profile that you can use to filter the responses.
+1.3 Understand Search Query: Use your training data and understanding of natural language to understand the intent and nuances of the user's search query. You must try to identify the key elements in the query, such as the type of activities they are looking for, the locations they are interested in, and any other specific requirements they might have.
 
-1.3 Extract Existing Attractions: Extract the list of existing attractions from the provided itinerary, using the SightseeingName of each attraction for comparison.
+Module 2: Robust Attraction Matching and Filtering:
 
-Module 2: Attraction Matching and Filtering:
+2.1 Initial Match with Attraction Data: For each attraction in the TBO response, evaluate the TourDescription, SightseeingName, and other relevant fields to determine how well they match the search query, and also to see if they have anything that matches the user preferences or not.
 
-2.1 Analyze Search Query: Use your training data, and your understanding of natural language to understand what the user is trying to ask with their search query.
+2.2 Google Search for Detailed Validation: If you detect any ambiguity, or if the TourDescription is incomplete or vague, then you should use the Google Search Tool to validate the details. Use Google to find detailed descriptions of each attraction, and also to find user reviews about the activities, and to see if those reviews match the descriptions in TBO data. You must also use Google to validate if the activity actually is what is stated in the TBO data, and you must note all the findings.
 
-2.2 Match with Attraction Descriptions: For each attraction in the TBO response, evaluate how well the TourDescription and other relevant fields match the user's search query. You must use your training and understanding of natural language here to find suitable matches.
+If the google search suggests that the activity is not actually what the TBO data claims, then you should give a lower priority to that activity, or remove it, if required.
 
-Use Google search for validation if required, or if the tour descriptions are not sufficient.
+2.3 Filter Based on User Profile and Preferences: Filter out attractions that do not match the user's preferences, stated dislikes, and budget constraints. For example, if a user has stated that they do not like crowded places, then you must filter out attractions that are known to be very crowded. Or if the user is looking for only budget friendly options, then you must filter out the ones that are too expensive. You must mention all these filters, and their specific impact in your final decision.
 
-2.3 Filter Out Existing Attractions: Remove attractions that are already present in the provided itinerary based on the SightseeingName field. You must ensure that you are only providing attractions that are not already included in the plan.
-
-2.4 Filter based on User Preferences: If the user has mentioned some specific dislikes or preferences, you must use that data to also filter out the activities. If the user has said they do not like crowded places, or if they want only budget friendly options, then you must filter the activities based on those.
+2.4 Handle Edge Cases: Be prepared to handle edge cases such as queries that do not have a very clear intent, ambiguous attraction descriptions, or where there is no clear match, and use your best judgment to determine the most appropriate results, in such cases. You should also note when you have to take a decision based on your judgment.
 
 Module 3: Structured JSON Output Generation:
 
-3.1 Select Matching Attractions: Based on all the above mentioned steps, pick all the activities that match the user query and are also not present in the current itinerary.
+3.1 Select and Order Matching Attractions: Based on the results of your analysis, select all attractions that match the user's query, while also keeping their preferences and budget in mind, and also validating them using Google search. If there are multiple matches, then you can prioritize based on the user reviews, or the popularity of the activity, as determined by Google search.
 
-3.2 JSON Output: Return the output as a JSON array of JSON objects, with each object representing one activity. Each of these objects should have the following keys:
+3.2 JSON Output Structure: Return the output as a JSON array of JSON objects. Each object represents one activity that matches the user's query, and has the following keys:
 
-CityName: (String) The city of the attraction. Take this data from TBO's response object.
-* Currency: (String) The currency of the price. Take this data from TBO's response object.
-* ImageList: (List of strings) The image URLs from TBO data. Take this data from TBO's response object.
-* Name: (String) The name of the attraction. Take this data from TBO's response object.
-* Price: (Number) The offered price of the activity from TBO's response object. If it is missing, then you must use the published price, and if both are missing then you must use 0. 
-* id : (String) The id of the attraction from tbo's response object. Note that this is different from the sightseeing code. The id field is named "id" in tbo's response object.
-4.3 Valid JSON: The output must be a valid JSON object.
+CityName: (String) The city of the attraction.
 
-4.4 No Extraneous Information: The output must only be the JSON object and should not have any surrounding text, or any other data.
+Currency: (String) The currency of the price.
 
-JSON Output Structure (Example):
+ImageList: (List of strings) The image URLs from TBO data.
+
+Name: (String) The name of the attraction.
+
+Price: (Number) The offered price of the attraction (or published price, if offered is not present)
+
+id : (String) The id of the attraction. Note that this is different from the sightseeing code and is present in the tbo response object under the key 'id'.
+
+3.3 Valid JSON Output: Ensure the output is a valid JSON object, and that it is well structured according to the above format.
+
+3.4 No Additional Text: The output should only be the JSON object and should not contain anything else.
+
+Example JSON Output Structure:
 
 [
     {
@@ -2393,10 +2397,10 @@ JSON Output Structure (Example):
         "ImageList": ["https://media.activitiesbank.com/15744/ENG/B/15744_1.jpg", "https://media.activitiesbank.com/15744/ENG/B/15744_2.jpg"],
         "Name": "Lonely Planet Experiences - Delhi Food Walk",
         "Price": 2495.24,
-        "id" : 0789
+        "id" : "1234"
     },
     {
-        "CityName": "Delhi",
+        "CityName": "Delhi and NCR",
         "Currency": "INR",
         "ImageList": [
             "https://media.activitiesbank.com/15746/ENG/B/15746_1.jpg",
@@ -2410,8 +2414,8 @@ JSON Output Structure (Example):
         "Price": 4546.9,
         "id" : "3456"
     },
-    {
-        "CityName": "Delhi",
+     {
+        "CityName": "Delhi and NCR",
         "Currency": "INR",
         "ImageList": [
             "https://media.activitiesbank.com/32729/ENG/B/32729_4.jpg",
@@ -2420,47 +2424,33 @@ JSON Output Structure (Example):
             "https://media.activitiesbank.com/32729/ENG/B/32729_1.jpg"
         ],
         "Name": "Cycle Tour of Old or New Delhi",
-       "Price": 5323.19,
-       "id" : "2345"
-    },
-   {
-      "CityName": "Delhi",
-       "Currency": "INR",
-        "ImageList": [
-        "https://media.activitiesbank.com/29674/ENG/B/29674_1.jpg",
-        "https://media.activitiesbank.com/29674/ENG/B/29674_2.jpg",
-        "https://media.activitiesbank.com/29674/ENG/B/29674_3.jpg",
-        "https://media.activitiesbank.com/29674/ENG/B/29674_4.jpg",
-        "https://media.activitiesbank.com/29674/ENG/B/29674_5.jpg",
-        "https://media.activitiesbank.com/29674/ENG/B/29674_6.jpg"
-          ],
-        "Name": "Temples of Delhi - Half-Day Tour",
-        "Price": 5594.94,
-        "id" : "1234"
-       }
+        "Price": 5323.19,
+        "id" : "5678"
+    }
 ]
-
+Use code with caution.
+Json
 Constraints:
 
 Adhere to the detailed chain-of-thought process.
 
-You must use the Google Search tool judiciously for validation purposes.
+You must use the Google Search Tool for validation, especially for understanding user reviews, and to validate the details of the activities.
 
-You must also ensure that the attractions that you are outputting are not already present in the itinerary, and that they also match the user preferences and the search query.
+You must use user preferences and the search query to filter, prioritize, and rank the matching attractions.
 
-The output must be a valid JSON array of JSON objects, with the keys mentioned above, and must have no other information.
+The output must be a valid JSON array, and it must only contain the JSON array, and nothing else.
 
 Important Considerations:
 
-Relevance: Your primary focus should be on providing attractions that are highly relevant to the user's search query.
+Accuracy: Your output must be accurate and must only contain activities that match the search query and the user preferences, after all the validations.
 
-Accuracy: The details that you extract should be accurate.
+Robustness: Your code should be able to handle any missing or malformed data, or any ambiguities in the user query, by using reasonable defaults.
 
-Robustness: Your system should be able to handle incomplete data, and to provide a reasonable response even if some values are missing.
+Clarity: Your process should be clear and transparent, and the output should be in the specified structure.
 
-Efficiency: The system must be efficient and must be able to filter and return all the matching attractions as fast as possible.
+Completeness: You should ensure that you are not skipping out on anything, and all required fields are present in the output.
 
-Structure: The JSON output must follow the specified structure."""
+User Centricity: You must ensure that the activities that you are selecting should be a good fit for the user based on all available data and not just the user query."""
 
 system_instruction_for_session_title = """You are a highly creative and perceptive title generator for TBO.com. Your sole task is to analyze a chat history and generate a concise, engaging, and evocative title for the travel planning session. This title should reflect the user's preferences, the destination, key activities, and the season or time of year in a way that captures the overall feeling or experience of the trip. You will be provided with:
 

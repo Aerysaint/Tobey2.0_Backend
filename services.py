@@ -57,9 +57,9 @@ def populateDescription(activityid, groupid):
     if activity is not None:
         fh.add_llm_description(groupid, activityid, gemini.get_attraction_llm_description(activity, itinerary, history))
     else:
+        activity = fh.get_activity_by_id_in_itinerary(groupid, activityid)
         if activity is not None:
             print("hmmm, no activity must be an itinerary then")
-            activity = fh.get_activity_by_id_in_itinerary(groupid, activityid)
             fh.add_llm_description_on_itinerary(groupid, activityid, gemini.get_attraction_llm_description(activity, itinerary, history))
 
 def addAllAttractions(attractions, sessionid):
@@ -91,7 +91,8 @@ def convertGroupChatToLLMParseable(groupchat):
                 pass
             las['role'] = 'user'
             las['parts'] = [{'text': message['message']}]
-    llmchat.append(las)
+    if las != {}:
+        llmchat.append(las)
     while (len(llmchat) and llmchat[-1]['role'] == 'model'):
         llmchat = llmchat[0:-2]
     return llmchat
