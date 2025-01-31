@@ -74,7 +74,7 @@ def next_message_for_initial_chat(history):
 
 def next_message_for_ai_chat(history, curr_itinerary, attractions):
     message = history[-1]["parts"][0]["text"]
-    system_instruction = system_instructions_for_ai_chat
+    system_instruction = system_instruction_for_ai_chat
     system_instruction += "here is the current complete itinerary\n\n" + str(curr_itinerary) + "\n\n"
     system_instruction += "here is the complete list of attractions\n\n" + str(attractions) + "\n\n"
     chat = client.chats.create(model="gemini-2.0-flash-exp", history=history, config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
@@ -88,6 +88,20 @@ def next_message_for_ai_chat(history, curr_itinerary, attractions):
             continue
     return response.text
 
+def get_attraction_llm_description(attraction, curr_itinerary, chat_history):
+    system_instruction = system_instruction_for_llm_description
+    system_instruction += "Here is the current complete itinerary\n\n" + str(curr_itinerary) + "\n\n"
+    system_instruction += "Here is the chat history\n\n" + str(chat_history) + "\n\n"
+    chat = client.chats.create(model="gemini-2.0-flash-exp", history=chat_history, config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
+    while True:
+        try:
+            response = chat.send_message(attraction)
+            break
+        except Exception as e:
+            print("Something went wrong in the descriptioning")
+            print(e)
+            continue
+    return response.text
 # Example usage:
 # system_instructions = prompts.base_system_instruction + prompts.system_instruction_for_sorting_attractions_based_on_time
 # history, chat, system_instructions = start_chat(system_instructions)  # Start a new chat
