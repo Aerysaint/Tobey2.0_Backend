@@ -128,6 +128,19 @@ def get_search_result(query, curr_itinerary, attractions):
             continue
     return result
 
+def get_session_title(chat_history):
+    system_instruction = system_instruction_for_session_title
+    chat = client.chats.create(model="gemini-2.0-flash-exp", history=[], config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
+    while True:
+        try:
+            response = chat.send_message("Give me the title of this session based on the chat history : " + str(chat_history))
+            break
+        except Exception as e:
+            print("Something went wrong in the session title")
+            print(e)
+            continue
+    return response.text
+
 
 # Example usage:
 # system_instructions = prompts.base_system_instruction + prompts.system_instruction_for_sorting_attractions_based_on_time
