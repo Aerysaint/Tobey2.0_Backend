@@ -116,7 +116,7 @@ def get_search_result(query, curr_itinerary, attractions):
             if resp[0] == "`":
                 resp = resp[7:]
                 resp = resp[:-4]
-            result = convert_string_to_json(resp)
+            result = resp
             lst = []
             for i in result:
                 lst.append(i)

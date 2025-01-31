@@ -1,6 +1,7 @@
 import firebase_admin
 from firebase_admin import credentials, firestore, auth
 import time
+from datetime import datetime
 
 import services
 
@@ -28,9 +29,9 @@ def create_group(userid):
     a = users_ref.document(userid).get().to_dict()['sessions']
     a.append(ssid)
     users_ref.document(userid).update({'sessions': a})
-    sessions_ref.document(ssid).set({'owner': userid})
     a = [userid]
-    sessions_ref.document(ssid).update({'users': a})
+    sessions_ref.document(ssid).update({'users': a, 'owner': userid})
+    set_status(ssid, "Chatting")
     print("returning: ", ssid)
     return ssid
 
@@ -39,12 +40,24 @@ def add_message_to_first_chat(role, sessionid, message):
     sessions_ref.document(sessionid).collection("first chat").document(current_milli_time()).set(
         {'role': role, 'parts': [{'text': message}]})
 
+
 def get_group_chat(sessionid):
     docs = sessions_ref.document(sessionid).collection("group chat").stream()
     arr = []
     for doc in docs:
         arr.append(doc.to_dict())
     return arr
+
+
+def add_llm_description(sessionid, activityid, description):
+    sessions_ref.document(sessionid).collection("activities").document(activityid).update(
+        {'llmDescription': description})
+
+
+def add_llm_description_on_itinerary(sessionid, activityid, description):
+    sessions_ref.document(sessionid).collection("itinerary").document(activityid).update(
+        {'llmDescription': description})
+
 
 def get_first_chat(sessionid):
     docs = sessions_ref.document(sessionid).collection("first chat").stream()
@@ -79,8 +92,31 @@ def add_activities(sessionid, activities):
 
 
 def add_activity_to_itinerary(sessionid, activity):
-    id = current_milli_time()
-    sessions_ref.document(sessionid).collection("itinerary").document(id).set(activity)
+    # Convert string dates to datetime objects for comparison
+    new_start = datetime.fromisoformat(activity['FromDate'].replace('Z', '+00:00'))
+    new_end = datetime.fromisoformat(activity['ToDate'].replace('Z', '+00:00'))
+
+    # Get all existing activities for the day
+    itinerary_ref = sessions_ref.document(sessionid).collection("itinerary")
+    existing_activities = itinerary_ref.get()
+
+    # Check for overlaps
+    for existing in existing_activities:
+        data = existing.to_dict()
+        if 'FromDate' not in data or 'ToDate' not in data:
+            continue
+
+        existing_start = datetime.fromisoformat(data['FromDate'].replace('Z', '+00:00'))
+        existing_end = datetime.fromisoformat(data['ToDate'].replace('Z', '+00:00'))
+
+        # Check if activities overlap
+        if (new_start < existing_end and new_end > existing_start):
+            return -1
+
+    # If no overlaps, add the activity
+    id = str(current_milli_time())
+    print(id)
+    itinerary_ref.document(id).set(activity)
     return id
 
 
@@ -89,8 +125,49 @@ def remove_activity_from_itinerary(sessionid, activity):
 
 
 def update_activity(sessionid, activityid, fromdate, todate):
-    sessions_ref.document(sessionid).collection("itinerary").document(activityid).update(
-        {'FromDate': fromdate, 'ToDate': todate})
+    session_ref = sessions_ref.document(sessionid)
+
+    # Convert string dates to datetime objects for comparison
+    new_start = datetime.fromisoformat(fromdate.replace('Z', '+00:00'))
+    new_end = datetime.fromisoformat(todate.replace('Z', '+00:00'))
+
+    # Validate time range
+    if new_start >= new_end:
+        return {"error": "Invalid time range: start time must be before end time"}
+
+    # Get all activities for this day to check for overlaps
+    itinerary_ref = session_ref.collection("itinerary")
+    activities = itinerary_ref.get()
+
+    # Check for overlaps with other activities
+    for activity in activities:
+        # Skip the current activity being updated
+        if activity.id == activityid:
+            continue
+
+        activity_data = activity.to_dict()
+        existing_start = datetime.fromisoformat(activity_data['FromDate'].replace('Z', '+00:00'))
+        existing_end = datetime.fromisoformat(activity_data['ToDate'].replace('Z', '+00:00'))
+
+        # Check if activities overlap
+        if (
+                (new_start < existing_end and new_end > existing_start) or
+                (new_start < existing_start and new_end > existing_end)
+        ):
+            return {
+                "error": "Time slot occupied",
+                "description": "This time slot overlaps with an existing activity"
+            }
+
+    # If no overlaps, update the activity
+    try:
+        itinerary_ref.document(activityid).update({
+            'FromDate': fromdate,
+            'ToDate': todate
+        })
+        return {"success": True}
+    except Exception as e:
+        return {"error": f"Failed to update activity: {str(e)}"}
 
 
 def set_status(sessionid, status):
@@ -111,6 +188,10 @@ def get_name_by_userid(userid):
 
 def get_activity_by_id(sessionid, activityid):
     return sessions_ref.document(sessionid).collection("activities").document(activityid).get().to_dict()
+
+
+def get_activity_by_id_in_itinerary(sessionid, activityid):
+    return sessions_ref.document(sessionid).collection("itinerary").document(activityid).get().to_dict()
 
 
 def get_all_activities(sessionid):
@@ -192,3 +273,13 @@ def check_group_existance(groupId):
 
 def update_budget(groupid, budget):
     sessions_ref.document(groupid).update({'budget': budget})
+
+
+def get_all_activities_with_id(groupid):
+    arr = []
+    docs = sessions_ref.document(groupid).collection("activities").stream()
+    for doc in docs:
+        curr = doc.to_dict()
+        curr['id'] = doc.id
+        arr.append(curr)
+    return arr

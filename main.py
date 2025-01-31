@@ -44,6 +44,24 @@ async def updateNextAi(sessionid: str):
     return "ok"
 
 
+@app.get("/getLLMDescription")
+async def getLLMDescription(activityid: str, groupid: str):
+    services.populateDescription(activityid, groupid)
+    return "ok"
+
+
+@app.get("/addCustomActivity")
+async def addCustomActivity(groupid: str, name: str, cityname: str, fromdate: str, todate: str):
+    activity = {}
+    activity["Name"] = name
+    activity["CityName"] = cityname
+    activity["FromDate"] = fromdate
+    activity["ToDate"] = todate
+    activity["ImageList"] = []
+    activity["Price"] = 0
+    fh.add_activity_to_itinerary(groupid, activity)
+
+
 @app.get("/updateNextInitial")
 async def updateNextInitial(sessionid: str):
     history = fh.get_first_chat(sessionid)
@@ -59,7 +77,7 @@ async def updateNextInitial(sessionid: str):
         realhist = realhist[0:-2]
         thread = threading.Thread(target=services.additinerary, args=(realhist, sessionid))
         thread.start()
-        return "ok"
+        return {"status": "chat finished"}
     fh.add_message_to_first_chat("model", sessionid, response)
     return "ok"
 
@@ -88,7 +106,7 @@ async def addGroupMessage(groupid: str, message: str, request: Request):
     userid = fh.get_uid(idToken)
     username = fh.get_name_by_userid(userid)
     fh.add_message_to_group_chat(username, groupid, message)
-    if message.startswith("@Tobey"):
+    if "@Tobey" in message:
         print(groupid)
         thread = threading.Thread(target=services.groupChatReturn, args=(groupid,))
         thread.start()
@@ -102,9 +120,11 @@ async def addActivityToItinerary(groupid: str, activityid: str, fromdate: str, t
     activity = services.addTimeToActivity(activity, fromdate, todate)
     return fh.add_activity_to_itinerary(groupid, activity)
 
+
 @app.get("/removeActivityFromItinerary")
 async def addActivityToItinerary(groupid: str, activityid: str):
     fh.remove_activity_from_itinerary(groupid, activityid)
+
 
 @app.get("/updateActivityInItinerary")
 async def updateActivityInItinerary(groupid: str, activityid: str, fromdate: str, todate: str):
@@ -214,6 +234,14 @@ async def signOut():
     )
     return response
 
+
 @app.get("/updateBudget")
 async def updateBudget(groupid: str, budget: float, request: Request):
     fh.update_budget(groupid, budget)
+
+
+@app.get("/llmSearch")
+async def llmSearch(groupid: str, query: str):
+    activities = fh.get_all_activities_with_id(groupid)
+    itinerary = fh.get_full_itinerary(groupid)
+    return gemini.get_search_result(query, itinerary, activities)

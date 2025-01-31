@@ -2386,7 +2386,7 @@ CityName: (String) The city of the attraction. Take this data from TBO's respons
 
 JSON Output Structure (Example):
 
-{
+[
     {
         "CityName": "Delhi",
         "Currency": "INR",
@@ -2438,7 +2438,7 @@ JSON Output Structure (Example):
         "Price": 5594.94,
         "id" : "1234"
        }
-}
+]
 
 Constraints:
 
@@ -2462,5 +2462,3 @@ Efficiency: The system must be efficient and must be able to filter and return a
 
 Structure: The JSON output must follow the specified structure."""
 
-
-system_instruction_for_

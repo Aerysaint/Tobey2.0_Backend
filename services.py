@@ -49,6 +49,18 @@ def additinerary(hist, sessionid):
     for activity in final:
         fh.add_activity_to_itinerary(sessionid, activity)
 
+def populateDescription(activityid, groupid):
+    history = fh.get_group_chat(groupid)
+    history = convertGroupChatToLLMParseable(history)
+    itinerary = fh.get_full_itinerary(groupid)
+    activity = fh.get_activity_by_id(groupid, activityid)
+    if activity is not None:
+        fh.add_llm_description(groupid, activityid, gemini.get_attraction_llm_description(activity, itinerary, history))
+    else:
+        if activity is not None:
+            print("hmmm, no activity must be an itinerary then")
+            activity = fh.get_activity_by_id_in_itinerary(groupid, activityid)
+            fh.add_llm_description_on_itinerary(groupid, activityid, gemini.get_attraction_llm_description(activity, itinerary, history))
 
 def addAllAttractions(attractions, sessionid):
     ans = convertTboToActivities(attractions)
@@ -80,7 +92,7 @@ def convertGroupChatToLLMParseable(groupchat):
             las['role'] = 'user'
             las['parts'] = [{'text': message['message']}]
     llmchat.append(las)
-    while (llmchat[-1]['role'] == 'model'):
+    while (len(llmchat) and llmchat[-1]['role'] == 'model'):
         llmchat = llmchat[0:-2]
     return llmchat
 
@@ -89,6 +101,6 @@ def groupChatReturn(groupid):
     groupchat = fh.get_group_chat(groupid)
     groupchat = convertGroupChatToLLMParseable(groupchat)
     itinerary = fh.get_full_itinerary(groupid)
-    attractions = fh.get_all_activities(groupid)
+    attractions = fh.get_all_activities_with_id(groupid)
     message = gemini.next_message_for_ai_chat(groupchat, itinerary, attractions)
     fh.add_message_to_group_chat('Tobey', groupid, message)
