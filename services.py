@@ -38,8 +38,10 @@ def convertTboToActivity(tbo_activity):
 def convertTboToActivities(tbo_activities):
     ans = []
     for curr in tbo_activities:
-        for activity in curr['Response']['SightseeingSearchResults']:
-            ans.append(convertTboToActivity(activity))
+        if curr['Response']['SightseeingSearchResults'] is not None:
+            for activity in curr['Response']['SightseeingSearchResults']:
+                if activity is not None:
+                    ans.append(convertTboToActivity(activity))
     return ans
 
 

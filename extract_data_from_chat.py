@@ -26,14 +26,20 @@ def get_country_code(history, chat=None):
 # country_code = get_country_code(history, chat)
 # print(country_code)
 
+def get_user_city_list(history, city_list_complete):
+    system_instruction = system_instruction_for_getting_city_code
+    newHistory, newChat, _ = start_chat(system_instruction)
+    newHistory, newChat = send_message(f"Based on this chat history, and the given city list, extract the city list. json : {city_list_complete}. \n\n chat history : {history}", newHistory, newChat, system_instruction)
+    return newHistory[-1]["parts"][0]["text"]
 def create_user_detail_json(history, chat=None):
     system_instruction = system_instruction_for_creating_user_detail_json
     newHistory, newChat, _ = start_chat(system_instruction)
     newHistory, newChat = send_message("Populate the json with the given history as expected. Here's the chat history : \n\n" + str(history), newHistory, newChat, system_instruction)
     country_code = get_country_code(history, chat)
     country_code = country_code.strip()
-    city_list = get_city_list(country_code)
-    newHistory, newChat = send_message(f"Based on the given country code, and the city list, give me the final json. You're supposed to check if the country code is correctly populated, and the CityId is correctly populated.Note that Country Code is a two letter word, for example AE for Dubai. City code is a 6 digit numeric string, for example 148767 for Yelagiri, Tamil Nadu. In case there are multiple cities, add them as a list and in case there are multiple countries, add them as a list too. Country code : {country_code}, CityList : {city_list}", newHistory, newChat, system_instruction)
+    city_list_complete = get_city_list(country_code)
+    city_list = get_user_city_list(history, city_list_complete)
+    newHistory, newChat = send_message(f"Based on the given country code, and the city list(all have to be added), and the chat history, give me the final json. You're supposed to check if the country code is correctly populated, and the CityId is correctly populated.Note that Country Code is a two letter word, for example AE for Dubai. City code is a 6 digit numeric string, for example 148767. In case there are multiple cities, add them as a list and in case there are multiple countries, add them as a list too. Country code : {country_code}, CityList : {city_list}, chat history : {str(history)}", newHistory, newChat, system_instruction)
     print(newHistory[-1]["parts"][0]["text"])
     return newHistory[-1]["parts"][0]["text"]
 
@@ -52,4 +58,7 @@ def get_user_json(history):
     js = handle_child_ages(js)
     lst = get_attractions_list_for_multiple_destinations(js)
     attractions_list = lst
+    print("Printing list")
+    print(attractions_list)
+
     return attractions_list
