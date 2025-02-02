@@ -8,8 +8,8 @@ import services
 import threading
 from threading import Thread
 from bing_image_urls import bing_image_urls
-
-
+from timings import *
+from datetime import datetime
 # with open("attractions.txt", encoding="utf-8") as f:
 #     attractions = f.read()
 #
@@ -160,6 +160,30 @@ def has_duplicates(curr_json, attractions_set):
                 return True
             attractions_set.add(activity['SightseeingCode'])
     return False
+
+def timings_match(curr_json, dubai_attraction_timings):
+    curr_json = curr_json['complete_itinerary']
+    dubai_attractions = dict()
+    count = 0
+    for attraction in dubai_attraction_timings:
+        dubai_attractions[attraction['SightseeingCode']] = count
+        count += 1
+
+    for day, activity_list in curr_json.items():
+        for activity in activity_list:
+            if activity['SightseeingCode'] in dubai_attractions:
+                end_str = activity['ToDate'].split('T')[1]
+                start_str = activity['FromDate'].split('T')[1]
+                end = datetime.strptime(end_str, '%H:%M:%S')
+                start = datetime.strptime(start_str, '%H:%M:%S')
+                actual_end_str = dubai_attraction_timings[dubai_attractions[activity['SightseeingCode']]]['opening_time']
+                actual_start_str = dubai_attraction_timings[dubai_attractions[activity['SightseeingCode']]]['closing_time']
+                actual_end = datetime.strptime(actual_end_str, '%H:%M:%S')
+                actual_start = datetime.strptime(actual_start_str, '%H:%M:%S')
+                if end > actual_end or start < actual_start:
+                    return False
+                return True
+    return True
 def get_itinerary_json(itinerary, attractions, chat_history, shortlisted_attractions, num_days, model="gemini-2.0-flash-thinking-exp"):
     final_json = [None] * num_days  # Pre-allocate list with None values
     attractions_set = {}
@@ -178,7 +202,7 @@ def get_itinerary_json(itinerary, attractions, chat_history, shortlisted_attract
                     str_json = str_json[7:]
                     str_json = str_json[:-4]
                 curr_json = convert_string_to_json(str_json)
-                if verify_day_json(curr_json, attractions) and not has_duplicates(curr_json, attractions_set):
+                if verify_day_json(curr_json, attractions) and not has_duplicates(curr_json, attractions_set) and timings_match(curr_json, dubai_attraction_timings):
                     final_json[day_index] = convert_string_to_json(str_json)
                     break
                 else:
