@@ -68,7 +68,7 @@ def send_message(prompt, history, chat, system_instructions, model="gemini-2.0-f
 def next_message_for_initial_chat(history):
     message = history[-1]["parts"][0]["text"]
     system_instruction = system_instructions_for_initial_chat
-    chat = client.chats.create(model="gemini-2.0-flash-thinking-exp", history=history, config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
+    chat = client.chats.create(model="gemini-2.0-flash-exp", history=history, config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
     while True:
         try:
             response = chat.send_message(message)

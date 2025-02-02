@@ -1,4 +1,4 @@
-dubai_timings = [
+dubai_attraction_timings = [
     {
         "SightseeingCode": "E-E10-A1MANO0376",
         "opening_time": "09:00:00",

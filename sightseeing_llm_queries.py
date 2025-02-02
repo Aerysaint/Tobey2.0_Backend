@@ -134,14 +134,36 @@ def add_restaurants_on_route(chat_history, current_itinerary, model="gemini-2.0-
     return history[-1]["parts"][0]["text"]
 
 def check_name_price(activity, attractions):
+    print("checking name price")
+    if 'SightseeingCode' not in activity:
+        return True
     for curr_city in attractions:
+        print("Passed phase 1")
         if curr_city is not None:
-            curr_attractions = attractions['Response']['SightseeingSearchResults']
-            for attraction in curr_attractions:
-                if attraction['SightseeingCode'] == activity['SightseeingCode']:
-                    if attraction['SightseeingName'] == activity['SightseeingName'] and attraction['Price'] in list(activity['Price'].values()):
-                        return True
-                    return False
+            curr_response = curr_city['Response']
+            curr_attractions = curr_response['SightseeingSearchResults']
+            print("Passed phase 2")
+            if curr_attractions is not None:
+                for attraction in curr_attractions:
+                    if attraction['SightseeingCode'] == activity['SightseeingCode']:
+                        print("Passed phase 3")
+                        print(attraction['SightseeingName'])
+                        print(activity['SightseeingName'])
+                        if attraction['SightseeingName'] == activity['SightseeingName'] or True:
+                            print("Phase 4 passed")
+                            print(activity)
+                            curr_price = activity['price']
+                            print("Phase 5 passed")
+                            their_list = list(attraction['Price'].values())
+                            print("Phase 6 passed")
+                            if curr_price not in their_list:
+                                print("Phase 7 passed")
+                                return False
+                            else:
+                                return True
+                        else:
+                            return False
+    return True
 def verify_day_json(day_json, attractions):
     day_json = day_json['complete_itinerary']
     for day, activity_list in day_json.items():
@@ -153,6 +175,7 @@ def verify_day_json(day_json, attractions):
                 return False
 
 def has_duplicates(curr_json, attractions_set):
+    print("checking for duplicates")
     curr_json = curr_json['complete_itinerary']
     for day, activity_list in curr_json.items():
         for activity in activity_list:
@@ -162,6 +185,7 @@ def has_duplicates(curr_json, attractions_set):
     return False
 
 def timings_match(curr_json, dubai_attraction_timings):
+    print("doing timings match")
     curr_json = curr_json['complete_itinerary']
     dubai_attractions = dict()
     count = 0
@@ -171,7 +195,7 @@ def timings_match(curr_json, dubai_attraction_timings):
 
     for day, activity_list in curr_json.items():
         for activity in activity_list:
-            if activity['SightseeingCode'] in dubai_attractions:
+            if activity is not None and activity['SightseeingCode'] in dubai_attractions:
                 end_str = activity['ToDate'].split('T')[1]
                 start_str = activity['FromDate'].split('T')[1]
                 end = datetime.strptime(end_str, '%H:%M:%S')
@@ -474,16 +498,16 @@ def get_itinerary_after_chat(chat_history, sessionid):
 
     # Define thread functions
     def run_duration_analysis():
-        results['duration_analysis'] = retry_until_success(get_duration_analysis_of_attractions, shortlisted_attractions, chat_history, model="gemini-2.0-flash-exp")
+        results['duration_analysis'] = retry_until_success(get_duration_analysis_of_attractions, shortlisted_attractions, chat_history, "gemini-2.0-flash-exp")
 
     def run_clustering():
-        results['clustered_attractions'] = retry_until_success(cluster_groups_by_geographical_data, shortlisted_attractions, chat_history, model="gemini-2.0-flash-exp")
+        results['clustered_attractions'] = retry_until_success(cluster_groups_by_geographical_data, shortlisted_attractions, chat_history, "gemini-2.0-flash-exp")
 
     def run_timing_analysis():
-        results['time_based_attractions'] = retry_until_success(get_timings_for_attractions, shortlisted_attractions, chat_history, model="gemini-2.0-flash-exp")
+        results['time_based_attractions'] = retry_until_success(get_timings_for_attractions, shortlisted_attractions, chat_history, "gemini-2.0-flash-exp")
 
     def run_budget_analysis():
-        results['budget_reasoned_attractions'] = retry_until_success(get_budget_reasoning_for_attractions, shortlisted_attractions, chat_history, model="gemini-2.0-flash-exp")
+        results['budget_reasoned_attractions'] = retry_until_success(get_budget_reasoning_for_attractions, shortlisted_attractions, chat_history, "gemini-2.0-flash-exp")
 
     # Create and start threads
     threads = [
@@ -525,10 +549,10 @@ def get_itinerary_after_chat(chat_history, sessionid):
     print("step 13 done")
     fh.set_status(sessionid, "Planning best paths to take")
     route_to_be_followed = retry_until_success(get_route_to_be_followed, chat_history, intraday_planning,
-                                               free_attractions_added, model="gemini-2.0-flash-thinking-exp")
+                                               free_attractions_added, "gemini-2.0-flash-exp")
     print("step 14 done")
     fh.set_status(sessionid, "Adding restaurants")
-    restaurants_added = retry_until_success(add_restaurants_on_route, chat_history, route_to_be_followed, model="gemini-2.0-flash-exp")
+    restaurants_added = retry_until_success(add_restaurants_on_route, chat_history, route_to_be_followed, "gemini-2.0-flash-exp")
     print("step 15 done")
     if restaurants_added[0] == '`':
         restaurants_added = restaurants_added[7:]
