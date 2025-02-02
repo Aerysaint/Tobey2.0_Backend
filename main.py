@@ -193,7 +193,9 @@ async def authenticateSession(request: Request):
 async def getGroups(request: Request):
     cookie = request.cookies.get("session")
     uid = fh.get_uid(cookie)
-    return fh.get_groups(uid)
+    a=fh.get_groups(uid)
+    print(a)
+    return a
 
 
 @app.get("/getGroupName")
