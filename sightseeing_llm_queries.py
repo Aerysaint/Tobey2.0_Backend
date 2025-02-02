@@ -210,7 +210,7 @@ def timings_match(curr_json, dubai_attraction_timings):
     return True
 def get_itinerary_json(itinerary, attractions, chat_history, shortlisted_attractions, num_days, model="gemini-2.0-flash-thinking-exp"):
     final_json = [None] * num_days  # Pre-allocate list with None values
-    attractions_set = {}
+    attractions_set = set()
     def process_day(day_index):
         while True:
             try:
