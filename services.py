@@ -30,7 +30,7 @@ def convertTboToActivity(tbo_activity):
     ans["Name"] = tbo_activity["SightseeingName"]
     ans["CityName"] = tbo_activity["CityName"]
     ans['ImageList'] = tbo_activity["ImageList"]
-    ans['Price'] = tbo_activity["Price"]['BasePrice']
+    ans['Price'] = tbo_activity["Price"]['OfferedPriceRoundedOff']
     ans['Currency'] = tbo_activity["Price"]['CurrencyCode']
     return ans
 

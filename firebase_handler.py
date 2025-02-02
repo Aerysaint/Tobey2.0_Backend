@@ -235,7 +235,13 @@ def get_name_by_session_cookie(idToken):
 
 
 def get_groups(userid):
-    return users_ref.document(userid).get().to_dict()['sessions']
+    a=users_ref.document(userid).get().to_dict()['sessions']
+    temp = a.copy()
+    for c in a:
+        if check_group_existance(c) == False:
+            temp.remove(c)
+    a=temp
+    return a
 
 
 def get_group_name(groupId):

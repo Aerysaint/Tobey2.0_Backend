@@ -18,12 +18,12 @@ def convert_string_to_json(input):
     input = input.replace("true", "True")
     input = input.replace("null", "None")
     return eval(input)
-def getGeminiResponse(system_instructions, prompt, history, chat):
+def getGeminiResponse(system_instructions, prompt, history, chat, model="gemini-2.0-flash-thinking-exp"):
     # print("prompt is ",prompt)
     generation_config = types.GenerateContentConfig(system_instruction=system_instructions, safety_settings=safety_settings)
     if chat is None:
         # print("creating new chat with \n", history)
-        chat = client.chats.create(model="gemini-2.0-flash-exp", history=history, config=generation_config)
+        chat = client.chats.create(model=model, history=history, config=generation_config)
     while True:
         try:
             response = chat.send_message(prompt)
@@ -49,14 +49,14 @@ def format_history(history):
         elif turn["role"] == "model":
             formatted_history.append({"parts": [{"text": turn["parts"][0]}]})
     return formatted_history
-def send_message(prompt, history, chat, system_instructions):
+def send_message(prompt, history, chat, system_instructions, model="gemini-2.0-flash-thinking-exp"):
 
     """Sends a message to the chat and updates the history."""
     # print(formatted_history)
     # time.sleep(5)
     # history.append({"role": "user", "parts": [{"text" : prompt}]})
     try:
-        response, chat = getGeminiResponse(system_instructions, prompt,history, chat)
+        response, chat = getGeminiResponse(system_instructions, prompt,history, chat, model)
     except Exception as e:
         print(f"Error calling Gemini API: {e}")
         return history, chat  # Return original history and chat in case of error
@@ -68,7 +68,7 @@ def send_message(prompt, history, chat, system_instructions):
 def next_message_for_initial_chat(history):
     message = history[-1]["parts"][0]["text"]
     system_instruction = system_instructions_for_initial_chat
-    chat = client.chats.create(model="gemini-2.0-flash-exp", history=history, config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
+    chat = client.chats.create(model="gemini-2.0-flash-thinking-exp", history=history, config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
     while True:
         try:
             response = chat.send_message(message)
@@ -84,7 +84,7 @@ def next_message_for_ai_chat(history, curr_itinerary, attractions):
     system_instruction = system_instruction_for_ai_chat
     system_instruction += "here is the current complete itinerary\n\n" + str(curr_itinerary) + "\n\n"
     system_instruction += "here is the complete list of attractions\n\n" + str(attractions) + "\n\n"
-    chat = client.chats.create(model="gemini-2.0-flash-exp", history=history, config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
+    chat = client.chats.create(model="gemini-2.0-flash-thinking-exp", history=history, config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
     while True:
         try:
             response = chat.send_message(message)
@@ -99,7 +99,7 @@ def get_attraction_llm_description(attraction, curr_itinerary, chat_history):
     system_instruction = system_instruction_for_llm_description
     system_instruction += "Here is the current complete itinerary\n\n" + str(curr_itinerary) + "\n\n"
     system_instruction += "Here is the chat history\n\n" + str(chat_history) + "\n\n"
-    chat = client.chats.create(model="gemini-2.0-flash-exp", history=chat_history, config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
+    chat = client.chats.create(model="gemini-2.0-flash-thinking-exp", history=chat_history, config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
     while True:
         try:
             response = chat.send_message(str(attraction))
@@ -113,7 +113,7 @@ def get_attraction_llm_description(attraction, curr_itinerary, chat_history):
 def get_search_result(query, attractions):
     system_instruction = system_instruction_for_search
     system_instruction += "Here is the complete list of attractions\n\n" + str(attractions) + "\n\n"
-    chat = client.chats.create(model="gemini-2.0-flash-exp", history=[], config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
+    chat = client.chats.create(model="gemini-2.0-flash-thinking-exp", history=[], config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
     result = []
     while True:
         try:
@@ -136,7 +136,7 @@ def get_search_result(query, attractions):
 
 def get_session_title(chat_history):
     system_instruction = system_instruction_for_session_title
-    chat = client.chats.create(model="gemini-2.0-flash-exp", history=[], config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
+    chat = client.chats.create(model="gemini-2.0-flash-thinking-exp", history=[], config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
     while True:
         try:
             response = chat.send_message("Give me the title of this session based on the chat history : " + str(chat_history))
@@ -146,6 +146,21 @@ def get_session_title(chat_history):
             print(e)
             continue
     return response.text
+
+def get_session_budget(chat_history):
+    system_instruction = system_instruction_for_session_budget
+    chat = client.chats.create(model="gemini-2.0-flash-thinking-exp", history=[], config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
+    while True:
+        try:
+            response = chat.send_message("Give me the budget of this session based on the chat history : " + str(chat_history))
+            response = response.text
+            budget = float(response)
+            return budget
+            break
+        except Exception as e:
+            print("Something went wrong in the session budget")
+            print(e)
+            continue
 
 
 # Example usage:
