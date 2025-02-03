@@ -163,6 +163,7 @@ def get_session_budget(chat_history):
         except Exception as e:
             print("Something went wrong in the session budget")
             print(e)
+            return 3000
             continue
 
 
