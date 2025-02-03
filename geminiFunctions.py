@@ -154,6 +154,9 @@ def get_session_budget(chat_history):
         try:
             response = chat.send_message("Give me the budget of this session based on the chat history : " + str(chat_history))
             response = response.text
+            if response[0] == "`":
+                response = response[7:]
+                response = response[:-4]
             budget = float(response)
             return budget
             break

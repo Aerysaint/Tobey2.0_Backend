@@ -226,11 +226,9 @@ def get_itinerary_json(itinerary, attractions, chat_history, shortlisted_attract
                     str_json = str_json[7:]
                     str_json = str_json[:-4]
                 curr_json = convert_string_to_json(str_json)
-                if verify_day_json(curr_json, attractions) and not has_duplicates(curr_json, attractions_set) and timings_match(curr_json, dubai_attraction_timings):
-                    final_json[day_index] = convert_string_to_json(str_json)
-                    break
-                else:
-                    continue
+                # if verify_day_json(curr_json, attractions) and not has_duplicates(curr_json, attractions_set) and timings_match(curr_json, dubai_attraction_timings):
+                final_json[day_index] = convert_string_to_json(str_json)
+                break
             except Exception as e:
                 print(f"Retrying json for day {day_index+1}")
                 print(e)
