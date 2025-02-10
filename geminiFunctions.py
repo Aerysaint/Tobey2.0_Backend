@@ -163,9 +163,9 @@ def get_session_budget(chat_history):
         except Exception as e:
             print("Something went wrong in the session budget")
             print(e)
-            return 3000
+            chat_history = str(chat_history)
+            chat_history += " Remember, you have to give only the budget in the form of a float and ONLY the number with no explanations or anything else."
             continue
-
 
 # Example usage:
 # system_instructions = prompts.base_system_instruction + prompts.system_instruction_for_sorting_attractions_based_on_time

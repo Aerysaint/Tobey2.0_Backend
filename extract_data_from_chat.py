@@ -5,6 +5,7 @@ from geminiFunctions import *
 from tbo_sightseeing_queries import *
 from prompts_and_sys_instructions import *
 from make_json_searchable import *
+import tbo_hotel_queries as tbo_hotel
 ###for testing
 
 # print("Starting")
@@ -47,7 +48,6 @@ def get_user_json(history):
     chat = None
     js = create_user_detail_json(history, chat)
 
-
     if(js[0] == '`'):
         js = js[7:]
         js = js[:-4]
@@ -60,5 +60,10 @@ def get_user_json(history):
     attractions_list = lst
     print("Printing list")
     print(attractions_list)
-
     return attractions_list
+
+
+
+
+
+

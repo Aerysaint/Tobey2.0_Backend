@@ -71,7 +71,7 @@ async def updateNextInitial(sessionid: str):
     if ("Received hihihiha" in response):
         realhist = history.copy()
         history.append({"role": "model", "parts": [{"text": response}]})
-        history.append({"role": "user", "parts": [{"text": "Please give me a summary of my trip again as a json."}]})
+        history.append({"role": "user", "parts": [{"text": "Sorry, just to recap things again, as I missed your last message, could you give me the summary again ?"}]})
         response = gemini.next_message_for_initial_chat(history)
         name = gemini.get_session_title(realhist)
         fh.add_group_name(name, sessionid)
