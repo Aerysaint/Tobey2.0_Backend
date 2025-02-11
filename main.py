@@ -253,3 +253,9 @@ async def llmSearch(groupid: str, query: str):
     a=gemini.get_search_result(query, activities)
     print(a)
     return a
+
+@app.get("/getCities")
+async def getCities(groupid: str):
+    cityIds = fh.get_city_ids(groupid)
+    #this will return a list of cities along with a list of all possible hotels for each city in this format:
+    #{city name: {tbo json}, city 2 name: {tbo json}}

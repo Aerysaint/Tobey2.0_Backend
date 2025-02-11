@@ -303,3 +303,24 @@ def get_all_activities_with_id(groupid):
 
 def add_group_name(name, sessionid):
     sessions_ref.document(sessionid).update({'name': name})
+
+#TODO: set city ids in createitinerary function
+def set_city_ids(sessionid, cityId):
+    sessions_ref.document(sessionid).update({'cities': cityId})
+
+def get_city_ids(sessionid):
+    return sessions_ref.document(sessionid).get().to_dict()['cities']
+
+def restore_session(sessionid):
+    docs = sessions_ref.document(sessionid).collection("activities").stream()
+    for doc in docs:
+        sessions_ref.document(sessionid).collection("activities").document(doc.id).delete()
+    docs = sessions_ref.document(sessionid).collection("itinerary").stream()
+    for doc in docs:
+        sessions_ref.document(sessionid).collection("itinerary").document(doc.id).delete()
+
+def set_country_code(sessionid, countryCode):
+    sessions_ref.document(sessionid).update({'countryCode': countryCode})
+
+def get_country_code(sessionid):
+    return sessions_ref.document(sessionid).get().to_dict()['countryCode']

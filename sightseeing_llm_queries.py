@@ -475,7 +475,7 @@ def populate_llm_descriptions(itinerary_json, llm_descriptions):
 
 def get_itinerary_after_chat(chat_history, sessionid):
     fh.set_status(sessionid, "Finding attractions for you")
-    attractions = retry_until_success(get_user_json, chat_history)
+    attractions = retry_until_success(get_user_json, chat_history, sessionid)
     thread = threading.Thread(target=services.addAllAttractions, args=(attractions, sessionid))
     thread.start()
     print("step 1 done")
