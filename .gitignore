@@ -11,3 +11,4 @@ sightseeing_llm_queries_cached.py
 testing.ipynb
 testing.json
 testing.py
+__pycache__
