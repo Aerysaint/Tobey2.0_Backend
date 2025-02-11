@@ -1,6 +1,8 @@
 from datetime import datetime
 import threading
 
+import tbo_general as tbo
+import tbo_hotel_queries as hotels
 from fastapi import FastAPI, Cookie, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.models import Response
@@ -117,7 +119,6 @@ async def addGroupMessage(groupid: str, message: str, request: Request):
 
 @app.get("/addActivityToItinerary")
 async def addActivityToItinerary(groupid: str, activityid: str, fromdate: str, todate: str):
-    # TODO: custom events
     activity = fh.get_activity_by_id(groupid, activityid)
     activity = services.addTimeToActivity(activity, fromdate, todate)
     return fh.add_activity_to_itinerary(groupid, activity)
@@ -257,5 +258,27 @@ async def llmSearch(groupid: str, query: str):
 @app.get("/getCities")
 async def getCities(groupid: str):
     cityIds = fh.get_city_ids(groupid)
+    countryCode = fh.get_country_code(groupid)
+    cityNames = []
+    cities = tbo.get_city_list(countryCode)['CityList']
+    for cityId in cityIds:
+        for city in cities:
+            if city['Code'] == cityId:
+                cityNames.append((city['Name'], cityId))
+                break
+    ans = {}
+    for a in cityNames:
+        ans[a[0]]=hotels.get_hotels_list(a[1])['Hotels']
+    return ans
     #this will return a list of cities along with a list of all possible hotels for each city in this format:
     #{city name: {tbo json}, city 2 name: {tbo json}}
+
+
+class RegenerateHotels(BaseModel):
+    hotels: list
+
+@app.post("/regenerateItinerary")
+async def regenerateItinerary(hotels: RegenerateHotels):
+    #should be in the form:
+    #{'hotels':['city name': 'hotel code']}
+    pass
