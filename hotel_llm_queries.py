@@ -21,3 +21,19 @@ def sort_hotels_for_user(city_code, chat_history):
             print(e)
             continue
 
+def get_hotel_description(hotel_code, chat_history):
+    hotel_details = get_hotel_details(hotel_code)
+    hotel_details = hotel_details["HotelDetails"]
+    hotel_details.pop("Images")
+    system_instruction = system_instruction_for_hotel_description
+    history, chat, __ = start_chat(system_instruction)
+    while True:
+        try:
+            history, chat = send_message(f"Based on this chat history, and the given json, give the hotel description. json : {hotel_details}. \n\n chat history : {chat_history} \n\n. ", history, chat, system_instruction)
+            response = history[-1]["parts"][0]["text"]
+            return response
+        except Exception as e:
+            print("Something went wrong in the descriptioning")
+            print(e)
+            continue
+
