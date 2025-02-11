@@ -1,5 +1,5 @@
 
-from extract_data_from_chat import get_user_json
+from extract_data_from_chat import get_user_json, get_city_name_from_city_id
 from geminiFunctions import *
 from prompts_and_sys_instructions import *
 import json
@@ -10,6 +10,8 @@ from threading import Thread
 from bing_image_urls import bing_image_urls
 from timings import *
 from datetime import datetime
+from tbo_hotel_queries import *
+from hotel_llm_queries import *
 # with open("attractions.txt", encoding="utf-8") as f:
 #     attractions = f.read()
 #
@@ -471,11 +473,26 @@ def populate_llm_descriptions(itinerary_json, llm_descriptions):
 #
 # with open("itinerary.json", "w") as f:
 #     json.dump(output_json, f)
-
-
+def get_hotel_recommendations(city_list, chat_history, session_id):
+    city_wise_best_hotels = []
+    country_code = fh.get_country_code(session_id)
+    for city_code in city_list:
+        hotels_list = get_hotels_list(city_code)
+        hotels_list = hotels_list["Hotels"]
+        sorted_hotels = sort_hotels_for_user(city_code, chat_history)
+        chosen_hotel = sorted_hotels[0]
+        hotel_details = get_hotel_details(chosen_hotel)
+        hotel_details.pop("Images")
+        city_wise_best_hotels.append({str(get_city_name_from_city_id(country_code, city_code)) : str(hotel_details)})
+    system_instruction = system_instruction_for_hotel_recommendation
+    history, chat, _ = start_chat(system_instruction)
+    history, chat = send_message(f"Based on the chat history and this list of hotels which are given to you , recommend the hotels. Keep in mind that you have to give the GREATEST weightage to the chat history and the preferences and don't give too many hotel shifts unless asked for it. Here's the chat history : {str(chat_history)} \n\n here's the list of hotels : {str(city_wise_best_hotels)}", history, chat, system_instruction)
+    return history[-1]["parts"][0]["text"]
 def get_itinerary_after_chat(chat_history, sessionid):
     fh.set_status(sessionid, "Finding attractions for you")
-    attractions = retry_until_success(get_user_json, chat_history, sessionid)
+    attractions, city_list = retry_until_success(get_user_json, chat_history, sessionid)
+    hotel_recommendations = get_hotel_recommendations(city_list, chat_history, sessionid)
+    chat_history[-1]["parts"][0]["text"] += "These are my hotel preferences which I asked from another LLM. These may not be very accurate, but you may want to look into it for a better idea\n\n" + str(hotel_recommendations)
     thread = threading.Thread(target=services.addAllAttractions, args=(attractions, sessionid))
     thread.start()
     print("step 1 done")

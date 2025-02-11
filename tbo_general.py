@@ -15,7 +15,7 @@ def get_country_list():
     response = requests.get(url, json=payload, auth=auth)
     # print(response.json)
     if(response.status_code == 200):
-        return response.json()
+        return response.json()["CountryList"]
     return -1
 
 
@@ -26,7 +26,7 @@ def get_city_list(country_code):
     }
     response = requests.post(url, json=payload, auth=auth)
     if(response.status_code == 200):
-        return response.json()
+        return response.json()["CityList"]
     return -1
 
 
