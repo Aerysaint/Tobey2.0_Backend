@@ -542,13 +542,13 @@ def get_hotel_recommendations(city_list, chat_history, session_id):
     history, chat = send_message(prompt, history, chat, system_instruction, model="gemini-2.0-flash")
     print("recommendations : \n", history[-1]["parts"][0]["text"])
     return history[-1]["parts"][0]["text"]
-def get_itinerary_after_chat(chat_history, sessionid):
+def get_itinerary_after_chat(chat_history, sessionid, e):
     fh.set_status(sessionid, "Finding attractions for you")
     attractions, city_list = retry_until_success(get_user_json, chat_history, sessionid)
     fh.set_city_ids(sessionid, city_list)
-    hotel_recommendations = get_hotel_recommendations(city_list, chat_history, sessionid)
-
-    chat_history[-1]["parts"][0]["text"] += "These are my hotel preferences which I asked from another LLM. These may not be very accurate, but you may want to look into it for a better idea\n\n" + str(hotel_recommendations)
+    if e:
+        hotel_recommendations = get_hotel_recommendations(city_list, chat_history, sessionid)
+        chat_history[-1]["parts"][0]["text"] += "These are my hotel preferences which I asked from another LLM. These may not be very accurate, but you may want to look into it for a better idea\n\n" + str(hotel_recommendations)
     thread = threading.Thread(target=services.addAllAttractions, args=(attractions, sessionid))
     thread.start()
     print("step 1 done")

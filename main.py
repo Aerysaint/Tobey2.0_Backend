@@ -73,13 +73,14 @@ async def updateNextInitial(sessionid: str):
     if ("Received hihihiha" in response):
         realhist = history.copy()
         history.append({"role": "model", "parts": [{"text": response}]})
-        history.append({"role": "user", "parts": [{"text": "Sorry, just to recap things again, as I missed your last message, could you give me the summary again ?"}]})
+        history.append({"role": "user", "parts": [{
+            "text": "Sorry, just to recap things again, as I missed your last message, could you give me the summary again ?"}]})
         response = gemini.next_message_for_initial_chat(history)
         name = gemini.get_session_title(realhist)
         fh.add_group_name(name, sessionid)
         fh.add_summary(sessionid, response)
         realhist = realhist[0:-2]
-        thread = threading.Thread(target=services.additinerary, args=(realhist, sessionid))
+        thread = threading.Thread(target=services.additinerary, args=(realhist, sessionid, True))
         thread.start()
         return {"status": "chat finished"}
     fh.add_message_to_first_chat("model", sessionid, response)
@@ -159,7 +160,7 @@ async def createGroup(request: Request):
     try:
         return {"groupId": fh.create_group(userid)}
     except Exception as e:
-        print("oh boy",e)
+        print("oh boy", e)
         return {"groupId": None}
 
 
@@ -194,7 +195,7 @@ async def authenticateSession(request: Request):
 async def getGroups(request: Request):
     cookie = request.cookies.get("session")
     uid = fh.get_uid(cookie)
-    a=fh.get_groups(uid)
+    a = fh.get_groups(uid)
     print(a)
     return a
 
@@ -251,9 +252,10 @@ async def updateBudget(groupid: str, budget: float, request: Request):
 @app.get("/llmSearch")
 async def llmSearch(groupid: str, query: str):
     activities = fh.get_all_activities_with_id(groupid)
-    a=gemini.get_search_result(query, activities)
+    a = gemini.get_search_result(query, activities)
     print(a)
     return a
+
 
 @app.get("/getCities")
 async def getCities(groupid: str):
@@ -270,18 +272,36 @@ async def getCities(groupid: str):
     for a in cityNames:
         r = hotels.get_hotels_list(a[1])
         if 'Hotels' in r:
-            ans[a[0]]=r['Hotels']
+            ans[a[0]] = r['Hotels']
     return ans
-    #this will return a list of cities along with a list of all possible hotels for each city in this format:
-    #{city name: {tbo json}, city 2 name: {tbo json}}
+    # this will return a list of cities along with a list of all possible hotels for each city in this format:
+    # {city name: {tbo json}, city 2 name: {tbo json}}
 
 
 class RegenerateHotels(BaseModel):
-    hotels: list
+    hotels: dict
+    groupId: str
+
 
 @app.post("/regenerateItinerary")
-async def regenerateItinerary(hotels: RegenerateHotels):
-    #should be in the form:
-    #{'hotels':['city name': 'hotel code']}
-    print(hotels)
-    pass
+async def regenerateItinerary(selhotels: RegenerateHotels):
+    print(selhotels.hotels)
+    groupId = selhotels.groupId
+    history = fh.get_first_chat(groupId)
+    s = ""
+    for k, v in selhotels.hotels.items():
+        # k is city name v is hotel code
+        if v == -1:
+            s += k + ": not chosen\n"
+        else:
+            x = hotels.get_hotel_details(v)
+            if 'Images' in x:
+                x.pop('Images')
+            s += k + ": " + str(x) + "\n"
+    history[-1]['parts'][0][
+        'text'] += "\nThis is the list of hotels that I have recieved from another llm, kindly choose hotels among these:\n" + s
+    name = gemini.get_session_title(history)
+    fh.add_group_name(name, groupId)
+    thread = threading.Thread(target=services.additinerary, args=(history, groupId, False))
+    thread.start()
+    return

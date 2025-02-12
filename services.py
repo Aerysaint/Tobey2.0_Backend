@@ -45,8 +45,9 @@ def convertTboToActivities(tbo_activities):
     return ans
 
 
-def additinerary(hist, sessionid):
-    final = llm.get_itinerary_after_chat(hist, sessionid)
+def additinerary(hist, sessionid, e):
+    fh.restore_session(sessionid)
+    final = llm.get_itinerary_after_chat(hist, sessionid, e)
     final = convert_llm_itinerary(final)
     budget = gemini.get_session_budget(hist)
     fh.update_budget(sessionid, budget)
