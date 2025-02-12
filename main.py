@@ -260,7 +260,7 @@ async def getCities(groupid: str):
     cityIds = fh.get_city_ids(groupid)
     countryCode = fh.get_country_code(groupid)
     cityNames = []
-    cities = tbo.get_city_list(countryCode)['CityList']
+    cities = tbo.get_city_list(countryCode)
     for cityId in cityIds:
         for city in cities:
             if city['Code'] == cityId:
@@ -268,7 +268,9 @@ async def getCities(groupid: str):
                 break
     ans = {}
     for a in cityNames:
-        ans[a[0]]=hotels.get_hotels_list(a[1])['Hotels']
+        r = hotels.get_hotels_list(a[1])
+        if 'Hotels' in r:
+            ans[a[0]]=r['Hotels']
     return ans
     #this will return a list of cities along with a list of all possible hotels for each city in this format:
     #{city name: {tbo json}, city 2 name: {tbo json}}
@@ -281,4 +283,5 @@ class RegenerateHotels(BaseModel):
 async def regenerateItinerary(hotels: RegenerateHotels):
     #should be in the form:
     #{'hotels':['city name': 'hotel code']}
+    print(hotels)
     pass

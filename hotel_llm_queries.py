@@ -11,9 +11,16 @@ def sort_hotels_for_user(city_code, chat_history):
             history, chat = send_message(f"Based on this chat history, and the given json, sort the hotels. json : {hotels_list}. \n\n chat history : {chat_history} \n\n. Remember your response must be a valid python list as your response will be fed directly to eval function in python.", history, chat, system_instruction)
 
             response = history[-1]["parts"][0]["text"]
-            if response[0] == '`':
-                response = response[7:]
-                response = response[:-4]
+            print(response)
+            for i in range(len(response)):
+                if response[i] == "[":
+                    response = response[i:]
+                    break
+            for i in range(len(response) - 1, -1, -1):
+                if response[i] == "]":
+                    response = response[:i + 1]
+                    break
+            print(response)
             lst = eval(response)
             return lst
         except Exception as e:

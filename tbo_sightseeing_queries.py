@@ -12,7 +12,7 @@ def authenticate():
     username = creds["TBO_SIGHTSEEING_API_USERNAME"]
     password = creds["TBO_SIGHTSEEING_API_PASSWORD"]
     client_id = creds["TBO_SIGHTSEEING_API_CLIENT_ID"]
-    url = "http://api.tektravels.com/SharedServices/SharedData.svc/rest/Authenticate"
+    url = "https://Sharedapi.tektravels.com/SharedData.svc/rest/Authenticate"
     payload = {
         "ClientId": client_id,
         "UserName": username,
@@ -31,7 +31,9 @@ trace_id = -1
 def get_attractions_list(country_code, city_id, from_date, to_date, adult_count, child_count, child_age,
                          preferred_currency, keyword=""):
     global trace_id
+    print("here")
     token_id = authenticate()
+    print("here")
     url = "https://SightseeingBE.tektravels.com/SightseeingService.svc/rest/Search"
     payload = {
         "CityId": city_id,
@@ -74,6 +76,7 @@ def get_attraction_details(result_index):
 def get_attractions_list_for_multiple_destinations(list_of_jsons):
     attractions_lst = []
     for curr_json in list_of_jsons:
+        print(curr_json)
         curr_list = get_attractions_list(curr_json["CountryCode"], curr_json["CityId"], curr_json["FromDate"],
                                          curr_json["ToDate"], curr_json["AdultCount"], curr_json["ChildCount"],
                                          curr_json["ChildAge"], curr_json["PreferredCurrency"])

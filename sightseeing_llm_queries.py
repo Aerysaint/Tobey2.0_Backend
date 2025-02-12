@@ -1,4 +1,3 @@
-
 from extract_data_from_chat import get_user_json, get_city_name_from_city_id
 from geminiFunctions import *
 from prompts_and_sys_instructions import *
@@ -24,8 +23,10 @@ def retry_until_success(func, *args):
             ans = func(*args)
             if ans is not None:
                 return ans
+            else:
+                continue
         except Exception as e:
-            print(f"Error: {e}. Retrying...")
+            print(f"Error: {e} in function {str(func.__name__)}. Retrying...")
 
 
 def shortlist_attractions(attractions_list, chat_history, model="gemini-2.0-flash-thinking-exp"):
@@ -212,7 +213,7 @@ def timings_match(curr_json, dubai_attraction_timings):
                     return False
                 return True
     return True
-def get_itinerary_json(itinerary, attractions, chat_history, shortlisted_attractions, num_days, model="gemini-2.0-flash-thinking-exp"):
+def get_itinerary_json(itinerary, attractions, chat_history, shortlisted_attractions, num_days, model="gemini-2.0-flash-exp"):
     final_json = [None] * num_days  # Pre-allocate list with None values
     attractions_set = set()
     def process_day(day_index):
@@ -230,9 +231,9 @@ def get_itinerary_json(itinerary, attractions, chat_history, shortlisted_attract
                     str_json = str_json[7:]
                     str_json = str_json[:-4]
                 curr_json = convert_string_to_json(str_json)
-                if verify_day_json(curr_json, attractions):
+                # if verify_day_json(curr_json, attractions):
                     # and not has_duplicates(curr_json, attractions_set) and timings_match(curr_json, dubai_attraction_timings)
-                    final_json[day_index] = convert_string_to_json(str_json)
+                final_json[day_index] = convert_string_to_json(str_json)
                 break
             except Exception as e:
                 print(f"Retrying json for day {day_index+1}")
@@ -474,24 +475,79 @@ def populate_llm_descriptions(itinerary_json, llm_descriptions):
 # with open("itinerary.json", "w") as f:
 #     json.dump(output_json, f)
 def get_hotel_recommendations(city_list, chat_history, session_id):
-    city_wise_best_hotels = []
+    """
+    For each city in the given city_list, this function retrieves the TBO hotels,
+    sorts them using Gemini, and picks the best hotel. The per-city processing has
+    been parallelized with multithreading. After collecting the results, the function
+    calls the Gemini API to generate hotel recommendations. Finally, the response is
+    returned from the LLM conversation.
+    """
+    city_list = set(city_list)
+    city_list = list(city_list)
+    print(city_list)
+    time.sleep(10)
+    from threading import Thread
+
     country_code = fh.get_country_code(session_id)
-    for city_code in city_list:
-        hotels_list = get_hotels_list(city_code)
-        hotels_list = hotels_list["Hotels"]
-        sorted_hotels = sort_hotels_for_user(city_code, chat_history)
-        chosen_hotel = sorted_hotels[0]
-        hotel_details = get_hotel_details(chosen_hotel)
-        hotel_details.pop("Images")
-        city_wise_best_hotels.append({str(get_city_name_from_city_id(country_code, city_code)) : str(hotel_details)})
+    results = [None] * len(city_list)
+
+    def process_city(city_code, index):
+        while True:
+            try:
+                hotels_data = get_hotels_list(city_code)
+                if hotels_data == -1:
+                    break
+                if "Hotels" not in hotels_data:
+                    break
+
+                print(hotels_data)
+                # hotels_data = hotels_data["Hotels"]
+                # Use the chat history to sort hotels via the LLM
+                sorted_hotels = sort_hotels_for_user(city_code, chat_history)
+                chosen_hotel = sorted_hotels[0]
+                hotel_details = get_hotel_details(chosen_hotel)
+                if "Images" in hotel_details:
+                    hotel_details.pop("Images")
+                print("Getting city_name")
+                city_name = get_city_name_from_city_id(country_code, city_code)
+                print("putting into results")
+                results[index%len(results)] = {str(city_name): str(hotel_details)}
+                break
+            except Exception as e:
+                print(f"Error processing city {city_code}: {e.with_traceback()}")
+                continue
+                # results[index] = {str(get_city_name_from_city_id(country_code, city_code)): "Error retrieving hotel details"}
+
+    # Create and start threads for each city code
+    threads = []
+    for idx, city_code in enumerate(city_list):
+        thread = Thread(target=process_city, args=(city_code, idx))
+        threads.append(thread)
+        thread.start()
+
+    # Wait for all threads to complete
+    for thread in threads:
+        thread.join()
+
+    city_wise_best_hotels = results
     system_instruction = system_instruction_for_hotel_recommendation
     history, chat, _ = start_chat(system_instruction)
-    history, chat = send_message(f"Based on the chat history and this list of hotels which are given to you , recommend the hotels. Keep in mind that you have to give the GREATEST weightage to the chat history and the preferences and don't give too many hotel shifts unless asked for it. Here's the chat history : {str(chat_history)} \n\n here's the list of hotels : {str(city_wise_best_hotels)}", history, chat, system_instruction)
+    prompt = (
+        f"Based on the given chat history and this list of hotels which are given to you, "
+        f"recommend the hotels. Keep in mind that you have to give the GREATEST weightage "
+        f"to the chat history and the preferences and don't give too many hotel shifts unless asked for it. "
+        f"Here's the chat history: {str(chat_history)}\n\n"
+        f"Here's the list of hotels: {str(city_wise_best_hotels)}"
+    )
+    history, chat = send_message(prompt, history, chat, system_instruction, model="gemini-2.0-flash")
+    print("recommendations : \n", history[-1]["parts"][0]["text"])
     return history[-1]["parts"][0]["text"]
 def get_itinerary_after_chat(chat_history, sessionid):
     fh.set_status(sessionid, "Finding attractions for you")
     attractions, city_list = retry_until_success(get_user_json, chat_history, sessionid)
+    fh.set_city_ids(sessionid, city_list)
     hotel_recommendations = get_hotel_recommendations(city_list, chat_history, sessionid)
+
     chat_history[-1]["parts"][0]["text"] += "These are my hotel preferences which I asked from another LLM. These may not be very accurate, but you may want to look into it for a better idea\n\n" + str(hotel_recommendations)
     thread = threading.Thread(target=services.addAllAttractions, args=(attractions, sessionid))
     thread.start()
@@ -516,7 +572,7 @@ def get_itinerary_after_chat(chat_history, sessionid):
 
     # Define thread functions
     def run_duration_analysis():
-        results['duration_analysis'] = retry_until_success(get_duration_analysis_of_attractions, shortlisted_attractions, chat_history, "gemini-2.0-flash-exp")
+        results['duration_analysis'] = retry_until_success(get_duration_analysis_of_attractions, shortlisted_attractions, chat_history, "gemini-2.0-flash")
 
     def run_clustering():
         results['clustered_attractions'] = retry_until_success(cluster_groups_by_geographical_data, shortlisted_attractions, chat_history, "gemini-2.0-flash-exp")
@@ -583,6 +639,7 @@ def get_itinerary_after_chat(chat_history, sessionid):
     output_json = {}
     for i in temp_json:
         curr_val = 0
+
         if "complete_itinerary" in i:
             curr_val = i["complete_itinerary"]
         else:
