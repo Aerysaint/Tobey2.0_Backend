@@ -638,12 +638,12 @@ def get_itinerary_after_chat(chat_history, sessionid, e):
                                     shortlisted_attractions, num_days)
     output_json = {}
     for i in temp_json:
-        curr_val = 0
-
-        if "complete_itinerary" in i:
-            curr_val = i["complete_itinerary"]
-        else:
-            curr_val = i
+        curr_val = {}
+        if i is not None:
+            if "complete_itinerary" in i:
+                curr_val = i["complete_itinerary"]
+            else:
+                curr_val = i
         output_json = output_json | curr_val
     fh.set_status(sessionid, "Done")
     print(output_json)
