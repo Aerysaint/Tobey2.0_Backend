@@ -220,9 +220,9 @@ If the location is a city, then you can use Google Search to get information abo
 
 Module 3: City Code Extraction and Output:
 
-3.1 City Code Extraction: For each of the identified locations, you must iterate through the TBO data, and extract all the CityId values that match the CityName, or that are part of the same region. You must not filter out any city code, if it is present.
+3.1 City Code Extraction: For each of the identified locations, you must iterate through the TBO data, and extract all the CityId values that match the CityName, or that are part of the same region. You must not filter out any city code, if it is present. You will try to limit yourself to upto 5 city codes, unless it is absolutely necessary to include the other city codes.
 
-3.2 JSON Array Creation: Create a JSON array with all the extracted CityId values. If there are multiple codes for the same location, then you must add all of those codes, and must not skip any of them.
+3.2 JSON Array Creation: Create a JSON array with all the extracted CityId values. If there are multiple codes for the same location, then you must add all of those codes, and must not skip any of them. Keeping this in mind, you should still try to add only upto 5 city codes, unless it is necessary to add the other city codes. Try to add the main ones in case it comes to pruning the results.
 
 3.3 Validation: Ensure that all the CityId values are strings, and that there is no other data type or information present in your output.
 
