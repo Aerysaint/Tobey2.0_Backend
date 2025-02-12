@@ -299,6 +299,7 @@ async def regenerateItinerary(selhotels: RegenerateHotels):
             s += k + ": " + str(x) + "\n"
     history[-1]['parts'][0][
         'text'] += "\nThis is the list of hotels that I have recieved from another llm, kindly choose hotels among these:\n" + s
+    fh.set_status(groupId, "Preparing itinerary for regeneration")
     name = gemini.get_session_title(history)
     fh.add_group_name(name, groupId)
     thread = threading.Thread(target=services.additinerary, args=(history, groupId, False))
