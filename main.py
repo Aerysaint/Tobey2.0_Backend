@@ -253,7 +253,6 @@ async def updateBudget(groupid: str, budget: float, request: Request):
 async def llmSearch(groupid: str, query: str):
     activities = fh.get_all_activities_with_id(groupid)
     a = gemini.get_search_result(query, activities)
-    print(a)
     return a
 
 
@@ -305,3 +304,16 @@ async def regenerateItinerary(selhotels: RegenerateHotels):
     thread = threading.Thread(target=services.additinerary, args=(history, groupId, False))
     thread.start()
     return
+
+@app.get("/getHotelDetails")
+def get_hotel_details(hotelCode: str):
+    x = hotels.get_hotel_details(hotelCode)['HotelDetails']
+    print(x[0])
+    return x[0]
+
+import hotel_llm_queries as hotelllm
+
+@app.get("/getHotelLLMDescription")
+def get_hotel_llm_description(hotelCode: str, groupId: str):
+    hist = fh.get_first_chat(groupId)
+    return hotelllm.get_hotel_description(hotelCode, hist)

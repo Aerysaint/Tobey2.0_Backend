@@ -2,6 +2,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore, auth
 import time
 from datetime import datetime
+import geminiFunctions as gemini
 
 import services
 
@@ -23,7 +24,6 @@ def create_user(name, email, userid):
             return
     users_ref.document(userid).set({'name': name, 'email': email, 'sessions': []})
 
-
 def create_group(userid):
     ssid = current_milli_time()
     a = users_ref.document(userid).get().to_dict()['sessions']
@@ -32,6 +32,10 @@ def create_group(userid):
     a = [userid]
     sessions_ref.document(ssid).set({'users': a, 'owner': userid, 'status': 'Chatting'})
     print("returning: ", ssid)
+    add_message_to_first_chat('user', ssid, "Hi there")
+    hist = get_first_chat(ssid)
+    response = gemini.next_message_for_initial_chat(hist)
+    add_message_to_first_chat("model", ssid, response)
     return ssid
 
 

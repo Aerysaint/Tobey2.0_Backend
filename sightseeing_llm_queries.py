@@ -646,7 +646,6 @@ def get_itinerary_after_chat(chat_history, sessionid, e):
                 curr_val = i
         output_json = output_json | curr_val
     fh.set_status(sessionid, "Done")
-    print(output_json)
     for day in output_json:
         for activity in output_json[day]:
             if activity['image_url'] is None:

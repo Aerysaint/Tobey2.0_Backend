@@ -93,7 +93,11 @@ def next_message_for_ai_chat(history, curr_itinerary, attractions):
             print("Something when wrong in the summoning")
             print(e)
             continue
-    return response.text
+    response = response.text
+    if response[0] == '`':
+        response = response[4:]
+        response = response[:-3]
+    return response
 
 def get_attraction_llm_description(attraction, curr_itinerary, chat_history):
     system_instruction = system_instruction_for_llm_description

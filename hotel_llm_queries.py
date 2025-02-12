@@ -31,7 +31,8 @@ def sort_hotels_for_user(city_code, chat_history):
 def get_hotel_description(hotel_code, chat_history):
     hotel_details = get_hotel_details(hotel_code)
     hotel_details = hotel_details["HotelDetails"]
-    hotel_details.pop("Images")
+    if 'Images' in hotel_details:
+        hotel_details.pop("Images")
     system_instruction = system_instruction_for_hotel_description
     history, chat, __ = start_chat(system_instruction)
     while True:
