@@ -117,16 +117,22 @@ def get_attraction_llm_description(attraction, curr_itinerary, chat_history):
 def get_search_result(query, attractions):
     system_instruction = system_instruction_for_search
     system_instruction += "Here is the complete list of attractions\n\n" + str(attractions) + "\n\n"
-    chat = client.chats.create(model="gemini-2.0-flash-thinking-exp", history=[], config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
+    chat = client.chats.create(model="gemini-2.0-flash-exp", history=[], config=types.GenerateContentConfig(system_instruction=system_instruction, safety_settings=safety_settings))
     result = []
     while True:
         try:
             response = chat.send_message(query)
-            resp = response.text
-            if resp[0] == "`":
-                resp = resp[7:]
-                resp = resp[:-4]
-            result = eval(resp)
+            response = response.text
+            print(response)
+            for i in range(len(response)):
+                if response[i] == "[":
+                    response = response[i:]
+                    break
+            for i in range(len(response) - 1, -1, -1):
+                if response[i] == "]":
+                    response = response[:i + 1]
+                    break
+            result = eval(response)
             lst = []
             for i in result:
                 lst.append(i)
